@@ -20,6 +20,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .field input{padding:10px 14px;border:1px solid #ddd;border-radius:var(--r);font-size:14px;outline:none;width:100%}
 .field input:focus{border-color:#111}
 .login-err{color:var(--danger);font-size:13px;margin-top:6px;min-height:18px}
+.login-info{color:#888;font-size:12px;margin-top:6px;min-height:16px}
 
 /* ── HEADER ── */
 #screen-app{display:none}
@@ -56,6 +57,7 @@ main{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
 /* ── BUTTONS ── */
 .btn{padding:8px 16px;border-radius:var(--r);border:none;cursor:pointer;font-size:14px;font-weight:500;transition:.15s;line-height:1}
 .btn-primary{background:#111;color:#fff}.btn-primary:hover{background:#333}
+.btn-primary:disabled{background:#999;cursor:wait}
 .btn-danger{background:#c0392b;color:#fff}.btn-danger:hover{background:#a93226}
 .btn-outline{background:#fff;color:#111;border:1px solid #ccc}.btn-outline:hover{background:#f4f4f4}
 .btn-sm{padding:5px 10px;font-size:12px}
@@ -98,6 +100,10 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #eee}
 .modal-err{color:var(--danger);font-size:13px;margin-top:8px}
 
+/* ── TOAST / SYNC ── */
+#sync{position:fixed;bottom:16px;right:16px;background:#111;color:#fff;font-size:13px;padding:8px 16px;border-radius:20px;opacity:0;transition:.3s;z-index:300;pointer-events:none}
+#sync.show{opacity:1}
+
 @media(max-width:600px){
   header{padding:0 1rem}.huser .huser-name{display:none}
   main{padding:1rem}.form-grid{grid-template-columns:1fr}
@@ -106,30 +112,23 @@ tbody td{padding:10px 14px;vertical-align:middle}
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════
-     LOGIN
-════════════════════════════════════════════ -->
+<!-- ════════════════════════════════════════════ LOGIN ════ -->
 <div id="screen-login">
   <div class="login-card">
     <div class="logo-wrap">
-      <!-- SURFRAME LOGO SVG (recreado) -->
       <svg width="52" height="52" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <!-- Engranaje: disco principal -->
         <circle cx="50" cy="48" r="30" fill="#111"/>
-        <!-- 10 dientes del engranaje -->
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(0   50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(36  50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(72  50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(108 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(144 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(180 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(216 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(252 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(288 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(324 50 48)"/>
-        <!-- Semicírculo blanco (sol / amanecer) — mitad superior -->
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(0   50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(36  50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(72  50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(108 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(144 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(180 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(216 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(252 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(288 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(324 50 48)"/>
         <path d="M 27 48 A 23 21 0 0 1 73 48 Z" fill="white"/>
-        <!-- Swoosh blanco — hoja/ola diagonal -->
         <path d="M 21 58 Q 44 32 78 50 Q 63 66 40 64 Q 29 62 21 58 Z" fill="white"/>
       </svg>
       <div class="hlogo-text">
@@ -142,28 +141,27 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="field"><label>Usuario</label><input type="text" id="l-user" placeholder="usuario" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="field"><label>Contraseña</label><input type="password" id="l-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="login-err" id="l-err"></div>
-    <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:11px" onclick="doLogin()">Ingresar</button>
+    <div class="login-info" id="l-info">Conectando con la base de datos…</div>
+    <button class="btn btn-primary" id="l-btn" style="width:100%;margin-top:12px;padding:11px" onclick="doLogin()" disabled>Conectando…</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     APP
-════════════════════════════════════════════ -->
+<!-- ════════════════════════════════════════════ APP ════ -->
 <div id="screen-app">
   <header>
     <div class="hlogo">
       <svg width="38" height="38" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="48" r="30" fill="#111"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(0   50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(36  50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(72  50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(108 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(144 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(180 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(216 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(252 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(288 50 48)"/>
-        <rect x="45.5" y="7"  width="9" height="13" rx="2" fill="#111" transform="rotate(324 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(0   50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(36  50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(72  50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(108 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(144 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(180 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(216 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(252 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(288 50 48)"/>
+        <rect x="45.5" y="7" width="9" height="13" rx="2" fill="#111" transform="rotate(324 50 48)"/>
         <path d="M 27 48 A 23 21 0 0 1 73 48 Z" fill="white"/>
         <path d="M 21 58 Q 44 32 78 50 Q 63 66 40 64 Q 29 62 21 58 Z" fill="white"/>
       </svg>
@@ -186,7 +184,6 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </header>
 
   <main>
-
     <!-- ── INVENTARIO ── -->
     <div class="page active" id="page-inventario">
       <div class="cards" id="stat-cards"></div>
@@ -199,6 +196,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <option value="warn">Stock bajo</option>
           <option value="danger">Sin stock</option>
         </select>
+        <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
       </div>
       <div class="tbl-wrap">
@@ -220,7 +218,6 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <button class="atab"        onclick="switchAdminTab('usr')">Usuarios</button>
       </div>
 
-      <!-- ADMIN: Inventario -->
       <div class="atab-panel active" id="atab-inv">
         <div class="section-hd">
           <h3>Gestión de inventario</h3>
@@ -241,7 +238,6 @@ tbody td{padding:10px 14px;vertical-align:middle}
         </div>
       </div>
 
-      <!-- ADMIN: Usuarios -->
       <div class="atab-panel" id="atab-usr">
         <div class="section-hd">
           <h3>Gestión de usuarios</h3>
@@ -258,7 +254,6 @@ tbody td{padding:10px 14px;vertical-align:middle}
         </div>
       </div>
     </div>
-
   </main>
 </div>
 
@@ -298,7 +293,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="modal-err" id="mp-err"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-pieza')">Cancelar</button>
-      <button class="btn btn-primary" onclick="savePiece()">Guardar</button>
+      <button class="btn btn-primary" id="mp-save" onclick="savePiece()">Guardar</button>
     </div>
   </div>
 </div>
@@ -321,58 +316,69 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="modal-err" id="mu-err"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-user')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveUser()">Guardar</button>
+      <button class="btn btn-primary" id="mu-save" onclick="saveUser()">Guardar</button>
     </div>
   </div>
 </div>
 
+<div id="sync">Guardando…</div>
+
 <script>
-// ═══ KEYS ═══════════════════════════════════════════
-const INV_KEY  = 'sf_inv';
-const USR_KEY  = 'sf_usr';
+/* ═══════════════════════════════════════════════════════════════════
+   CONFIGURACIÓN — pega aquí la URL del Web App de Google Apps Script
+   ═══════════════════════════════════════════════════════════════════ */
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwynQ4u33iPlmJyNmPH-zzLAf5iCN6bxx3JsGlIpyy4FJHOp6w0PDkFdRIyXf_hN2BuEA/exec';
+
 const SESS_KEY = 'sf_session';
 
-// ═══ DEFAULTS ═══════════════════════════════════════
-function defaultUsers(){
-  return [
-    {id:1, name:'Administrador', username:'admin', password:'surframe2024', role:'admin'}
-  ];
-}
-function defaultInv(){
-  return [
-    {id:1, codigo:'SF-001',categoria:'Tubería',  nombre:'Tubo sanitario redondo',   modelo:'TS-50-304',    material:'AISI 304', d1:'50mm Ø',   d2:'6000mm largo', d3:'1.5mm espesor', qty:24,min:10,unit:'unidades',precio:18500,notas:''},
-    {id:2, codigo:'SF-002',categoria:'Tubería',  nombre:'Tubo sanitario redondo',   modelo:'TS-38-304',    material:'AISI 304', d1:'38mm Ø',   d2:'6000mm largo', d3:'1.5mm espesor', qty:6, min:10,unit:'unidades',precio:14200,notas:'Pedido urgente'},
-    {id:3, codigo:'SF-003',categoria:'Tubería',  nombre:'Tubo sanitario cuadrado',  modelo:'TSC-40-316L',  material:'AISI 316L',d1:'40×40mm',  d2:'6000mm largo', d3:'1.2mm espesor', qty:0, min:5, unit:'unidades',precio:22000,notas:'Agotado'},
-    {id:4, codigo:'SF-004',categoria:'Brida',    nombre:'Brida DIN sanitaria',      modelo:'BDN-50-304',   material:'AISI 304', d1:'50mm Ø',   d2:'',             d3:'',              qty:45,min:15,unit:'unidades',precio:5800, notas:''},
-    {id:5, codigo:'SF-005',categoria:'Codo',     nombre:'Codo 90° sanitario',       modelo:'C90-50-304',   material:'AISI 304', d1:'50mm Ø',   d2:'90°',          d3:'',              qty:18,min:10,unit:'unidades',precio:7200, notas:''},
-    {id:6, codigo:'SF-006',categoria:'Codo',     nombre:'Codo 45° sanitario',       modelo:'C45-38-304',   material:'AISI 304', d1:'38mm Ø',   d2:'45°',          d3:'',              qty:3, min:8, unit:'unidades',precio:6800, notas:''},
-    {id:7, codigo:'SF-007',categoria:'Válvula',  nombre:'Válvula mariposa sanitaria',modelo:'VM-50-316L',  material:'AISI 316L',d1:'50mm Ø',   d2:'2"',           d3:'',              qty:12,min:5, unit:'unidades',precio:85000,notas:'Actuador manual'},
-    {id:8, codigo:'SF-008',categoria:'Soporte',  nombre:'Soporte ajustable de tubo',modelo:'SAT-50-304',   material:'AISI 304', d1:'50mm Ø',   d2:'Ajustable',    d3:'',              qty:30,min:10,unit:'unidades',precio:9500, notas:''},
-    {id:9, codigo:'SF-009',categoria:'Reducción',nombre:'Reducción concéntrica',    modelo:'RC-50-38-304', material:'AISI 304', d1:'50→38mm',  d2:'',             d3:'',              qty:8, min:6, unit:'unidades',precio:11200,notas:''},
-    {id:10,codigo:'SF-010',categoria:'Tapa',     nombre:'Tapa ciega sanitaria',     modelo:'TC-50-304',    material:'AISI 304', d1:'50mm Ø',   d2:'',             d3:'',              qty:22,min:8, unit:'unidades',precio:4200, notas:''}
-  ];
+/* ── Caché en memoria ── */
+let USERS = [];
+let INV   = [];
+
+/* ── API ── */
+function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
+
+async function apiGet(){
+  const r = await fetch(SCRIPT_URL, {method:'GET'});
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error||'Error de lectura');
+  USERS = toArr(j.data.users);
+  INV   = toArr(j.data.inventory);
 }
 
-// ═══ STORE ══════════════════════════════════════════
-function getUsers(){ return JSON.parse(localStorage.getItem(USR_KEY)||'null')||defaultUsers(); }
-function saveUsers(u){ localStorage.setItem(USR_KEY,JSON.stringify(u)); }
-function getInv(){ return JSON.parse(localStorage.getItem(INV_KEY)||'null')||defaultInv(); }
-function saveInv(d){ localStorage.setItem(INV_KEY,JSON.stringify(d)); }
+async function apiPost(payload){
+  showSync('Guardando…');
+  const r = await fetch(SCRIPT_URL, {method:'POST', body: JSON.stringify(payload)});
+  const j = await r.json();
+  hideSync();
+  if(!j.ok) throw new Error(j.error||'Error al guardar');
+  USERS = toArr(j.data.users);
+  INV   = toArr(j.data.inventory);
+}
+
+function getUsers(){ return USERS; }
+function getInv(){ return INV; }
+
+/* ── Session helpers ── */
 function getSession(){ return JSON.parse(sessionStorage.getItem(SESS_KEY)||'null'); }
-function saveSession(s){ sessionStorage.setItem(SESS_KEY,JSON.stringify(s)); }
+function saveSession(s){ sessionStorage.setItem(SESS_KEY, JSON.stringify(s)); }
 function clearSession(){ sessionStorage.removeItem(SESS_KEY); }
 
-// ═══ AUTH ═══════════════════════════════════════════
+/* ── SYNC TOAST ── */
+let syncT;
+function showSync(t){ const s=document.getElementById('sync'); s.textContent=t; s.classList.add('show'); }
+function hideSync(){ clearTimeout(syncT); syncT=setTimeout(()=>document.getElementById('sync').classList.remove('show'),600); }
+
+/* ═══ AUTH ═══ */
 let currentUser = null;
 
 function doLogin(){
   const u = document.getElementById('l-user').value.trim().toLowerCase();
   const p = document.getElementById('l-pwd').value;
-  const users = getUsers();
-  const found = users.find(x=>x.username.toLowerCase()===u && x.password===p);
+  const found = USERS.find(x=>String(x.username).toLowerCase()===u && String(x.password)===p);
   if(!found){ document.getElementById('l-err').textContent='Usuario o contraseña incorrectos.'; return; }
   currentUser = found;
-  saveSession(found);
+  saveSession({id:found.id, password:found.password});
   startApp();
 }
 
@@ -397,7 +403,13 @@ function startApp(){
   showPage('inventario');
 }
 
-// ═══ NAV ════════════════════════════════════════════
+async function reloadData(){
+  showSync('Actualizando…');
+  try{ await apiGet(); hideSync(); populateCatFilter(); renderStats(); renderTable(); renderAdminTable(); renderUserTable(); }
+  catch(e){ hideSync(); alert('No se pudo actualizar: '+e.message); }
+}
+
+/* ═══ NAV ═══ */
 function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('nav-inv').classList.toggle('active', p==='inventario');
@@ -413,13 +425,13 @@ function switchAdminTab(t){
   document.getElementById('atab-usr').classList.toggle('active',t==='usr');
 }
 
-// ═══ STATS ══════════════════════════════════════════
+/* ═══ STATS ═══ */
 function renderStats(){
   const d=getInv();
-  const sinStock=d.filter(x=>x.qty===0).length;
-  const bajo=d.filter(x=>x.qty>0&&x.qty<=x.min).length;
-  const ok=d.filter(x=>x.qty>x.min).length;
-  const val=d.reduce((a,x)=>a+(x.qty*x.precio),0);
+  const sinStock=d.filter(x=>Number(x.qty)===0).length;
+  const bajo=d.filter(x=>Number(x.qty)>0&&Number(x.qty)<=Number(x.min)).length;
+  const ok=d.filter(x=>Number(x.qty)>Number(x.min)).length;
+  const val=d.reduce((a,x)=>a+(Number(x.qty)*Number(x.precio||0)),0);
   document.getElementById('stat-cards').innerHTML=`
     <div class="card"><label>Total piezas</label><div class="val">${d.length}</div></div>
     <div class="card"><label>Stock OK</label><div class="val ok">${ok}</div></div>
@@ -428,15 +440,16 @@ function renderStats(){
     <div class="card"><label>Valor inventario</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`;
 }
 
-// ═══ INV TABLE ══════════════════════════════════════
+/* ═══ INV TABLE ═══ */
 function stockBadge(d){
-  if(d.qty===0) return '<span class="badge badge-danger">Sin stock</span>';
-  if(d.qty<=d.min) return '<span class="badge badge-warn">Stock bajo</span>';
+  const q=Number(d.qty), m=Number(d.min);
+  if(q===0) return '<span class="badge badge-danger">Sin stock</span>';
+  if(q<=m) return '<span class="badge badge-warn">Stock bajo</span>';
   return '<span class="badge badge-ok">OK</span>';
 }
 
 function populateCatFilter(){
-  const d=getInv(); const cats=[...new Set(d.map(x=>x.categoria))].sort();
+  const d=getInv(); const cats=[...new Set(d.map(x=>x.categoria))].filter(Boolean).sort();
   const sel=document.getElementById('filter-cat');
   const cur=sel.value;
   sel.innerHTML='<option value="">Todas las categorías</option>';
@@ -452,7 +465,8 @@ function renderTable(){
   const f=data.filter(d=>{
     const m=!q||[d.codigo,d.nombre,d.modelo,d.categoria].join(' ').toLowerCase().includes(q);
     const cm=!cat||d.categoria===cat;
-    const sm=!st||(st==='ok'&&d.qty>d.min)||(st==='warn'&&d.qty>0&&d.qty<=d.min)||(st==='danger'&&d.qty===0);
+    const qy=Number(d.qty), mn=Number(d.min);
+    const sm=!st||(st==='ok'&&qy>mn)||(st==='warn'&&qy>0&&qy<=mn)||(st==='danger'&&qy===0);
     return m&&cm&&sm;
   });
   const tbody=document.getElementById('tbl-body');
@@ -471,7 +485,7 @@ function renderTable(){
   </tr>`).join('');
 }
 
-// ═══ ADMIN INV TABLE ════════════════════════════════
+/* ═══ ADMIN INV TABLE ═══ */
 let editPieceId=null;
 
 function renderAdminTable(){
@@ -488,7 +502,7 @@ function renderAdminTable(){
     <td class="dimcell">${[d.d1,d.d2,d.d3].filter(Boolean).join(' / ')||'—'}</td>
     <td><strong>${d.qty}</strong> <span style="color:#ccc;font-size:11px">${d.unit}</span></td>
     <td style="color:#999;font-size:12px">${d.min}</td>
-    <td style="color:#666;font-size:12px">$${(d.precio||0).toLocaleString('es-CL')}</td>
+    <td style="color:#666;font-size:12px">$${Number(d.precio||0).toLocaleString('es-CL')}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openPieceModal(${d.id})">✏ Editar</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deletePiece(${d.id})">✕</button>
@@ -528,14 +542,13 @@ function openPieceModal(id=null){
   document.getElementById('mo-pieza').classList.add('open');
 }
 
-function savePiece(){
+async function savePiece(){
   const codigo=document.getElementById('mp-cod').value.trim();
   const nombre=document.getElementById('mp-nom').value.trim();
   if(!codigo||!nombre){document.getElementById('mp-err').textContent='Código y nombre son obligatorios.';return;}
-  const data=getInv();
-  const dup=data.find(d=>d.codigo.toLowerCase()===codigo.toLowerCase()&&d.id!==editPieceId);
+  const dup=getInv().find(d=>String(d.codigo).toLowerCase()===codigo.toLowerCase()&&d.id!==editPieceId);
   if(dup){document.getElementById('mp-err').textContent='Ya existe una pieza con ese código.';return;}
-  const p={
+  const item={
     codigo,nombre,
     categoria:document.getElementById('mp-cat').value,
     modelo:document.getElementById('mp-mod').value.trim(),
@@ -549,28 +562,24 @@ function savePiece(){
     precio:parseInt(document.getElementById('mp-prc').value)||0,
     notas:document.getElementById('mp-not').value.trim()
   };
-  if(editPieceId){
-    const i=data.findIndex(d=>d.id===editPieceId);
-    data[i]={...data[i],...p};
-  }else{
-    data.push({id:Date.now(),...p});
-  }
-  saveInv(data);
-  closeMo('mo-pieza');
-  renderAdminTable();
-  renderStats();
+  if(editPieceId) item.id=editPieceId;
+  const btn=document.getElementById('mp-save'); btn.disabled=true;
+  try{
+    await apiPost({type:'piece', action:'save', item});
+    closeMo('mo-pieza'); renderAdminTable(); renderStats();
+  }catch(e){ document.getElementById('mp-err').textContent='Error al guardar: '+e.message; }
+  btn.disabled=false;
 }
 
-function deletePiece(id){
+async function deletePiece(id){
   const d=getInv().find(x=>x.id===id);
   if(!d)return;
   if(!confirm(`¿Eliminar "${d.nombre}" (${d.codigo})? Esta acción no se puede deshacer.`))return;
-  saveInv(getInv().filter(x=>x.id!==id));
-  renderAdminTable();
-  renderStats();
+  try{ await apiPost({type:'piece', action:'delete', id}); renderAdminTable(); renderStats(); }
+  catch(e){ alert('Error al eliminar: '+e.message); }
 }
 
-// ═══ USER TABLE ═════════════════════════════════════
+/* ═══ USER TABLE ═══ */
 let editUserId=null;
 
 function renderUserTable(){
@@ -610,7 +619,7 @@ function openUserModal(id=null){
   document.getElementById('mo-user').classList.add('open');
 }
 
-function saveUser(){
+async function saveUser(){
   const name=document.getElementById('mu-name').value.trim();
   const username=document.getElementById('mu-user').value.trim().toLowerCase();
   const pwd=document.getElementById('mu-pwd').value;
@@ -619,40 +628,47 @@ function saveUser(){
   if(!name||!username){err.textContent='Nombre y usuario son obligatorios.';return;}
   if(!editUserId&&pwd.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres.';return;}
   if(editUserId&&pwd&&pwd.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres.';return;}
-  const users=getUsers();
-  const dup=users.find(u=>u.username===username&&u.id!==editUserId);
+  const dup=getUsers().find(u=>String(u.username).toLowerCase()===username&&u.id!==editUserId);
   if(dup){err.textContent='Ese nombre de usuario ya está en uso.';return;}
+  const item={name,username,role};
   if(editUserId){
-    const i=users.findIndex(u=>u.id===editUserId);
-    users[i]={...users[i],name,username,role};
-    if(pwd) users[i].password=pwd;
-    if(editUserId===currentUser.id){ currentUser.name=name; currentUser.username=username; currentUser.role=role; saveSession(currentUser); document.getElementById('h-nombre').textContent=name; }
+    item.id=editUserId;
+    const existing=getUsers().find(u=>u.id===editUserId);
+    item.password = pwd ? pwd : existing.password;
   }else{
-    users.push({id:Date.now(),name,username,password:pwd,role});
+    item.password=pwd;
   }
-  saveUsers(users);
-  closeMo('mo-user');
-  renderUserTable();
+  const btn=document.getElementById('mu-save'); btn.disabled=true;
+  try{
+    await apiPost({type:'user', action:'save', item});
+    if(editUserId===currentUser.id){
+      currentUser=getUsers().find(u=>u.id===editUserId);
+      saveSession({id:currentUser.id, password:currentUser.password});
+      document.getElementById('h-nombre').textContent=currentUser.name;
+    }
+    closeMo('mo-user'); renderUserTable();
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  btn.disabled=false;
 }
 
-function deleteUser(id){
+async function deleteUser(id){
   const u=getUsers().find(x=>x.id===id);
   if(!u)return;
   if(id===currentUser.id){alert('No puedes eliminar tu propia cuenta.');return;}
   if(!confirm(`¿Eliminar usuario "${u.username}"?`))return;
-  saveUsers(getUsers().filter(x=>x.id!==id));
-  renderUserTable();
+  try{ await apiPost({type:'user', action:'delete', id}); renderUserTable(); }
+  catch(e){ alert('Error al eliminar: '+e.message); }
 }
 
-// ═══ MODAL HELPERS ══════════════════════════════════
+/* ═══ MODAL HELPERS ═══ */
 function closeMo(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
 
-// ═══ EXPORT CSV ═════════════════════════════════════
+/* ═══ EXPORT CSV ═══ */
 function exportCSV(){
   const data=getInv();
   const hdr=['Código','Categoría','Nombre','Modelo','Material','Dim 1','Dim 2','Dim 3','Cantidad','Unidad','Stock mín','Precio','Notas'];
-  const rows=data.map(d=>[d.codigo,d.categoria,d.nombre,d.modelo,d.material,d.d1,d.d2,d.d3,d.qty,d.unit,d.min,d.precio,d.notas].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const rows=data.map(d=>[d.codigo,d.categoria,d.nombre,d.modelo,d.material,d.d1,d.d2,d.d3,d.qty,d.unit,d.min,d.precio,d.notas].map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
   const csv=[hdr.join(','),...rows].join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
@@ -660,13 +676,34 @@ function exportCSV(){
   a.click();
 }
 
-// ═══ INIT ════════════════════════════════════════════
-const sess = getSession();
-if(sess){
-  const u = getUsers().find(x=>x.id===sess.id);
-  if(u && u.password === sess.password){ currentUser=u; startApp(); }
-  else clearSession();
+/* ═══ INIT ═══ */
+async function init(){
+  const info=document.getElementById('l-info');
+  const btn=document.getElementById('l-btn');
+  if(SCRIPT_URL.indexOf('PEGAR_URL')>=0){
+    info.style.color='#c0392b';
+    info.textContent='⚠ Falta configurar la URL del script.';
+    return;
+  }
+  try{
+    await apiGet();
+    info.textContent='';
+    btn.disabled=false;
+    btn.textContent='Ingresar';
+    const sess=getSession();
+    if(sess){
+      const u=USERS.find(x=>x.id===sess.id && String(x.password)===String(sess.password));
+      if(u){ currentUser=u; startApp(); } else clearSession();
+    }
+  }catch(e){
+    info.style.color='#c0392b';
+    info.textContent='No se pudo conectar con la base de datos. Revisa la conexión.';
+    btn.textContent='Reintentar';
+    btn.disabled=false;
+    btn.onclick=()=>location.reload();
+  }
 }
+init();
 </script>
 </body>
 </html>
