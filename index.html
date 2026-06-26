@@ -172,6 +172,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
     </div>
     <nav>
       <button id="nav-inv" class="active" onclick="showPage('inventario')">Inventario</button>
+      <button id="nav-ins" onclick="showPage('insumos')">Insumos</button>
       <button id="nav-adm" style="display:none" onclick="showPage('admin')">Admin</button>
     </nav>
     <div class="huser">
@@ -211,10 +212,38 @@ tbody td{padding:10px 14px;vertical-align:middle}
       </div>
     </div>
 
+    <!-- ── INSUMOS ── -->
+    <div class="page" id="page-insumos">
+      <div class="cards" id="ins-stat-cards"></div>
+      <div class="toolbar">
+        <input type="text" id="ins-search" placeholder="Buscar insumo por nombre, código…" oninput="renderInsTable()">
+        <select id="ins-filter-cat" onchange="renderInsTable()"><option value="">Todas las categorías</option></select>
+        <select id="ins-filter-stock" onchange="renderInsTable()">
+          <option value="">Todo el stock</option>
+          <option value="ok">Stock OK</option>
+          <option value="warn">Stock bajo</option>
+          <option value="danger">Sin stock</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="exportInsCSV()">⬇ CSV</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Código</th><th>Nombre</th><th>Categoría</th>
+            <th>Cant.</th><th>Unidad</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="ins-tbl-body"></tbody>
+        </table>
+        <div class="empty" id="ins-tbl-empty" style="display:none">Sin resultados.</div>
+      </div>
+    </div>
+
     <!-- ── ADMIN ── -->
     <div class="page" id="page-admin">
       <div class="atabs">
         <button class="atab active" onclick="switchAdminTab('inv')">Inventario</button>
+        <button class="atab"        onclick="switchAdminTab('ins')">Insumos</button>
         <button class="atab"        onclick="switchAdminTab('usr')">Usuarios</button>
       </div>
 
@@ -235,6 +264,26 @@ tbody td{padding:10px 14px;vertical-align:middle}
             <tbody id="adm-tbl"></tbody>
           </table>
           <div class="empty" id="adm-empty" style="display:none">No hay piezas registradas.</div>
+        </div>
+      </div>
+
+      <div class="atab-panel" id="atab-ins">
+        <div class="section-hd">
+          <h3>Gestión de insumos</h3>
+          <button class="btn btn-primary" onclick="openInsModal()">+ Agregar insumo</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="adm-ins-search" placeholder="Buscar…" oninput="renderAdminInsTable()">
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Código</th><th>Nombre</th><th>Categoría</th>
+              <th>Cant.</th><th>Mín.</th><th>Precio</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="adm-ins-tbl"></tbody>
+          </table>
+          <div class="empty" id="adm-ins-empty" style="display:none">No hay insumos registrados.</div>
         </div>
       </div>
 
@@ -320,6 +369,51 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL INSUMO ════ -->
+<div class="overlay" id="mo-insumo">
+  <div class="modal" style="max-width:480px">
+    <h2 id="mi-title">Agregar insumo</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Código *</label><input id="mi-cod" placeholder="INS-001"></div>
+      <div class="form-group"><label>Categoría *</label>
+        <select id="mi-cat">
+          <optgroup label="Abrasivos / corte">
+            <option>Disco de corte</option><option>Disco flap</option><option>Disco de desbaste</option><option>Disco diamantado</option><option>Lija</option><option>Grata</option>
+          </optgroup>
+          <optgroup label="Soldadura">
+            <option>Electrodo</option><option>Alambre MIG</option><option>Gas / Tungsteno</option>
+          </optgroup>
+          <optgroup label="Ropa de trabajo">
+            <option>Overol</option><option>Chaleco</option><option>Polera / Buzo</option><option>Delantal</option>
+          </optgroup>
+          <optgroup label="Protección personal (EPP)">
+            <option>Guantes</option><option>Casco</option><option>Arnés</option><option>Lentes de seguridad</option><option>Protección auditiva</option><option>Mascarilla / Respirador</option><option>Careta facial</option><option>Botas de seguridad</option>
+          </optgroup>
+          <optgroup label="Otros">
+            <option>Herramienta</option><option>Limpieza</option><option>Lubricante</option><option>Ferretería</option><option>Otro</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group full"><label>Nombre del insumo *</label><input id="mi-nom" placeholder="Ej: Disco de corte 4½'' inox"></div>
+      <div class="form-group"><label>Marca / Referencia</label><input id="mi-mod" placeholder="Ej: Bosch / talla L"></div>
+      <div class="form-group"><label>Unidad</label>
+        <select id="mi-uni"><option>unidades</option><option>pares</option><option>cajas</option><option>paquetes</option><option>litros</option><option>kg</option><option>rollos</option></select>
+      </div>
+      <div class="form-group"><label>Cantidad actual *</label><input id="mi-qty" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label>Stock mínimo *</label><input id="mi-min" type="number" min="0" placeholder="5"></div>
+      <div class="form-group"><label>Precio unitario (CLP)</label><input id="mi-prc" type="number" min="0" placeholder="0"></div>
+      <div class="form-group full"><label>Notas</label>
+        <textarea id="mi-not" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Observaciones, proveedor, talla…"></textarea>
+      </div>
+    </div>
+    <div class="modal-err" id="mi-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-insumo')">Cancelar</button>
+      <button class="btn btn-primary" id="mi-save" onclick="saveInsumo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL USUARIO ════ -->
 <div class="overlay" id="mo-user">
   <div class="modal" style="max-width:420px">
@@ -356,6 +450,8 @@ const SESS_KEY = 'sf_session';
 /* ── Caché en memoria ── */
 let USERS = [];
 let INV   = [];
+let INS   = [];
+let insumosReady = false;
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
@@ -366,6 +462,8 @@ async function apiGet(){
   if(!j.ok) throw new Error(j.error||'Error de lectura');
   USERS = toArr(j.data.users);
   INV   = toArr(j.data.inventory);
+  INS   = toArr(j.data.insumos);
+  insumosReady = Object.prototype.hasOwnProperty.call(j.data,'insumos');
 }
 
 async function apiPost(payload){
@@ -376,10 +474,12 @@ async function apiPost(payload){
   if(!j.ok) throw new Error(j.error||'Error al guardar');
   USERS = toArr(j.data.users);
   INV   = toArr(j.data.inventory);
+  INS   = toArr(j.data.insumos);
 }
 
 function getUsers(){ return USERS; }
 function getInv(){ return INV; }
+function getIns(){ return INS; }
 
 /* ── Session helpers ── */
 function getSession(){ return JSON.parse(sessionStorage.getItem(SESS_KEY)||'null'); }
@@ -427,7 +527,11 @@ function startApp(){
 
 async function reloadData(){
   showSync('Actualizando…');
-  try{ await apiGet(); hideSync(); populateCatFilter(); renderStats(); renderTable(); renderAdminTable(); renderUserTable(); }
+  try{
+    await apiGet(); hideSync();
+    populateCatFilter(); renderStats(); renderTable(); renderAdminTable(); renderUserTable();
+    populateInsCatFilter(); renderInsStats(); renderInsTable(); renderAdminInsTable();
+  }
   catch(e){ hideSync(); alert('No se pudo actualizar: '+e.message); }
 }
 
@@ -435,15 +539,19 @@ async function reloadData(){
 function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('nav-inv').classList.toggle('active', p==='inventario');
+  document.getElementById('nav-ins').classList.toggle('active', p==='insumos');
   document.getElementById('nav-adm').classList.toggle('active', p==='admin');
   document.getElementById('page-'+p).classList.add('active');
   if(p==='inventario'){ populateCatFilter(); renderStats(); renderTable(); }
-  if(p==='admin'){ renderAdminTable(); renderUserTable(); }
+  if(p==='insumos'){ populateInsCatFilter(); renderInsStats(); renderInsTable(); }
+  if(p==='admin'){ renderAdminTable(); renderAdminInsTable(); renderUserTable(); }
 }
 
 function switchAdminTab(t){
-  document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('active',i===(t==='inv'?0:1)));
+  const order={inv:0,ins:1,usr:2};
+  document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('active',i===order[t]));
   document.getElementById('atab-inv').classList.toggle('active',t==='inv');
+  document.getElementById('atab-ins').classList.toggle('active',t==='ins');
   document.getElementById('atab-usr').classList.toggle('active',t==='usr');
 }
 
@@ -680,6 +788,151 @@ async function deleteUser(id){
   if(!confirm(`¿Eliminar usuario "${u.username}"?`))return;
   try{ await apiPost({type:'user', action:'delete', id}); renderUserTable(); }
   catch(e){ alert('Error al eliminar: '+e.message); }
+}
+
+/* ═══════════════ INSUMOS ═══════════════ */
+let editInsId=null;
+
+function renderInsStats(){
+  const d=getIns();
+  const sinStock=d.filter(x=>Number(x.qty)===0).length;
+  const bajo=d.filter(x=>Number(x.qty)>0&&Number(x.qty)<=Number(x.min)).length;
+  const ok=d.filter(x=>Number(x.qty)>Number(x.min)).length;
+  const val=d.reduce((a,x)=>a+(Number(x.qty)*Number(x.precio||0)),0);
+  document.getElementById('ins-stat-cards').innerHTML=`
+    <div class="card"><label>Total insumos</label><div class="val">${d.length}</div></div>
+    <div class="card"><label>Stock OK</label><div class="val ok">${ok}</div></div>
+    <div class="card"><label>Stock bajo</label><div class="val warn">${bajo}</div></div>
+    <div class="card"><label>Sin stock</label><div class="val danger">${sinStock}</div></div>
+    <div class="card"><label>Valor insumos</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`;
+}
+
+function populateInsCatFilter(){
+  const d=getIns(); const cats=[...new Set(d.map(x=>x.categoria))].filter(Boolean).sort();
+  const sel=document.getElementById('ins-filter-cat');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas las categorías</option>';
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  sel.value=cur;
+}
+
+function renderInsTable(){
+  const data=getIns();
+  const q=(document.getElementById('ins-search').value||'').toLowerCase();
+  const cat=document.getElementById('ins-filter-cat').value;
+  const st=document.getElementById('ins-filter-stock').value;
+  const f=data.filter(d=>{
+    const m=!q||[d.codigo,d.nombre,d.modelo,d.categoria].join(' ').toLowerCase().includes(q);
+    const cm=!cat||d.categoria===cat;
+    const qy=Number(d.qty), mn=Number(d.min);
+    const sm=!st||(st==='ok'&&qy>mn)||(st==='warn'&&qy>0&&qy<=mn)||(st==='danger'&&qy===0);
+    return m&&cm&&sm;
+  });
+  const tbody=document.getElementById('ins-tbl-body');
+  const empty=document.getElementById('ins-tbl-empty');
+  if(!f.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=f.map(d=>`<tr>
+    <td><code style="font-size:12px;color:#666">${d.codigo}</code></td>
+    <td><strong>${d.nombre}</strong>${d.modelo?`<br><small style="color:#aaa">${d.modelo}</small>`:''}</td>
+    <td><span class="tag-inox">${d.categoria}</span></td>
+    <td><strong style="font-size:15px">${d.qty}</strong></td>
+    <td style="color:#aaa;font-size:12px">${d.unit}</td>
+    <td>${stockBadge(d)}</td>
+  </tr>`).join('');
+}
+
+function renderAdminInsTable(){
+  const q=(document.getElementById('adm-ins-search')?.value||'').toLowerCase();
+  const data=getIns().filter(d=>!q||[d.codigo,d.nombre,d.categoria].join(' ').toLowerCase().includes(q));
+  const tbody=document.getElementById('adm-ins-tbl');
+  const empty=document.getElementById('adm-ins-empty');
+  if(!data.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=data.map(d=>`<tr>
+    <td><code style="font-size:12px">${d.codigo}</code></td>
+    <td>${d.nombre}${d.modelo?`<br><small style="color:#aaa">${d.modelo}</small>`:''}</td>
+    <td style="color:#666;font-size:12px">${d.categoria}</td>
+    <td><strong>${d.qty}</strong> <span style="color:#ccc;font-size:11px">${d.unit}</span></td>
+    <td style="color:#999;font-size:12px">${d.min}</td>
+    <td style="color:#666;font-size:12px">$${Number(d.precio||0).toLocaleString('es-CL')}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openInsModal(${d.id})">✏ Editar</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteInsumo(${d.id})">✕</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openInsModal(id=null){
+  editInsId=id;
+  document.getElementById('mi-title').textContent=id?'Editar insumo':'Agregar insumo';
+  document.getElementById('mi-err').textContent='';
+  if(id){
+    const d=getIns().find(x=>x.id===id);
+    if(!d)return;
+    document.getElementById('mi-cod').value=d.codigo;
+    document.getElementById('mi-cat').value=d.categoria;
+    document.getElementById('mi-nom').value=d.nombre;
+    document.getElementById('mi-mod').value=d.modelo;
+    document.getElementById('mi-uni').value=d.unit;
+    document.getElementById('mi-qty').value=d.qty;
+    document.getElementById('mi-min').value=d.min;
+    document.getElementById('mi-prc').value=d.precio;
+    document.getElementById('mi-not').value=d.notas;
+  }else{
+    ['mi-cod','mi-nom','mi-mod','mi-not'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('mi-qty').value='';
+    document.getElementById('mi-min').value='';
+    document.getElementById('mi-prc').value='';
+    document.getElementById('mi-cat').value='Disco de corte';
+    document.getElementById('mi-uni').value='unidades';
+  }
+  document.getElementById('mo-insumo').classList.add('open');
+}
+
+async function saveInsumo(){
+  if(!insumosReady){document.getElementById('mi-err').textContent='Falta activar la hoja de Insumos en el backend (ver instrucciones). No se guardó nada.';return;}
+  const codigo=document.getElementById('mi-cod').value.trim();
+  const nombre=document.getElementById('mi-nom').value.trim();
+  if(!codigo||!nombre){document.getElementById('mi-err').textContent='Código y nombre son obligatorios.';return;}
+  const dup=getIns().find(d=>String(d.codigo).toLowerCase()===codigo.toLowerCase()&&d.id!==editInsId);
+  if(dup){document.getElementById('mi-err').textContent='Ya existe un insumo con ese código.';return;}
+  const item={
+    codigo,nombre,
+    categoria:document.getElementById('mi-cat').value,
+    modelo:document.getElementById('mi-mod').value.trim(),
+    qty:parseInt(document.getElementById('mi-qty').value)||0,
+    min:parseInt(document.getElementById('mi-min').value)||0,
+    unit:document.getElementById('mi-uni').value,
+    precio:parseInt(document.getElementById('mi-prc').value)||0,
+    notas:document.getElementById('mi-not').value.trim()
+  };
+  if(editInsId) item.id=editInsId;
+  const btn=document.getElementById('mi-save'); btn.disabled=true;
+  try{
+    await apiPost({type:'insumo', action:'save', item});
+    closeMo('mo-insumo'); renderAdminInsTable(); renderInsStats();
+  }catch(e){ document.getElementById('mi-err').textContent='Error al guardar: '+e.message; }
+  btn.disabled=false;
+}
+
+async function deleteInsumo(id){
+  const d=getIns().find(x=>x.id===id);
+  if(!d)return;
+  if(!confirm(`¿Eliminar "${d.nombre}" (${d.codigo})? Esta acción no se puede deshacer.`))return;
+  try{ await apiPost({type:'insumo', action:'delete', id}); renderAdminInsTable(); renderInsStats(); }
+  catch(e){ alert('Error al eliminar: '+e.message); }
+}
+
+function exportInsCSV(){
+  const data=getIns();
+  const hdr=['Código','Categoría','Nombre','Marca','Cantidad','Unidad','Stock mín','Precio','Notas'];
+  const rows=data.map(d=>[d.codigo,d.categoria,d.nombre,d.modelo,d.qty,d.unit,d.min,d.precio,d.notas].map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
+  const csv=[hdr.join(','),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download='surframe-insumos.csv';
+  a.click();
 }
 
 /* ═══ MODAL HELPERS ═══ */
