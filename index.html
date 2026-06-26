@@ -562,12 +562,13 @@ function renderStats(){
   const bajo=d.filter(x=>Number(x.qty)>0&&Number(x.qty)<=Number(x.min)).length;
   const ok=d.filter(x=>Number(x.qty)>Number(x.min)).length;
   const val=d.reduce((a,x)=>a+(Number(x.qty)*Number(x.precio||0)),0);
+  const isAdmin = currentUser && currentUser.role==='admin';
   document.getElementById('stat-cards').innerHTML=`
     <div class="card"><label>Total piezas</label><div class="val">${d.length}</div></div>
     <div class="card"><label>Stock OK</label><div class="val ok">${ok}</div></div>
     <div class="card"><label>Stock bajo</label><div class="val warn">${bajo}</div></div>
     <div class="card"><label>Sin stock</label><div class="val danger">${sinStock}</div></div>
-    <div class="card"><label>Valor inventario</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`;
+    ${isAdmin?`<div class="card"><label>Valor inventario</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`:''}`;
 }
 
 /* ═══ INV TABLE ═══ */
@@ -799,12 +800,13 @@ function renderInsStats(){
   const bajo=d.filter(x=>Number(x.qty)>0&&Number(x.qty)<=Number(x.min)).length;
   const ok=d.filter(x=>Number(x.qty)>Number(x.min)).length;
   const val=d.reduce((a,x)=>a+(Number(x.qty)*Number(x.precio||0)),0);
+  const isAdmin = currentUser && currentUser.role==='admin';
   document.getElementById('ins-stat-cards').innerHTML=`
     <div class="card"><label>Total insumos</label><div class="val">${d.length}</div></div>
     <div class="card"><label>Stock OK</label><div class="val ok">${ok}</div></div>
     <div class="card"><label>Stock bajo</label><div class="val warn">${bajo}</div></div>
     <div class="card"><label>Sin stock</label><div class="val danger">${sinStock}</div></div>
-    <div class="card"><label>Valor insumos</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`;
+    ${isAdmin?`<div class="card"><label>Valor insumos</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`:''}`;
 }
 
 function populateInsCatFilter(){
