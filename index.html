@@ -279,7 +279,24 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="form-group full"><label>Modelo / Referencia</label><input id="mp-mod" placeholder="Ej: TS-50-3A"></div>
       <div class="form-group"><label>Material</label>
         <select id="mp-mat">
-          <option>AISI 304</option><option>AISI 316L</option><option>AISI 316</option><option>AISI 430</option><option>Otro inox</option>
+          <optgroup label="Acero inoxidable">
+            <option>AISI 304</option><option>AISI 316L</option><option>AISI 316</option><option>AISI 430</option>
+          </optgroup>
+          <optgroup label="Acero al carbono">
+            <option>Acero</option><option>Acero SAE 1045</option>
+          </optgroup>
+          <optgroup label="Bronce">
+            <option>Bronce</option><option>Bronce fosfórico</option><option>Bronce al aluminio</option><option>Bronce SAE 40</option><option>Bronce sinterizado (self-oil)</option>
+          </optgroup>
+          <optgroup label="Aluminio">
+            <option>Aluminio</option><option>Aluminio 6061</option><option>Aluminio 7075</option>
+          </optgroup>
+          <optgroup label="Plástico">
+            <option>Nylon</option><option>POM (Delrin)</option><option>Robalon (UHMW-PE)</option><option>Teflón (PTFE)</option><option>Polietileno (PE)</option><option>Polipropileno (PP)</option><option>PVC</option>
+          </optgroup>
+          <optgroup label="Otro">
+            <option>Fierro fundido</option><option>Goma</option><option>Otro</option>
+          </optgroup>
         </select>
       </div>
       <div class="form-group"><label>Dimensión principal</label><input id="mp-d1" placeholder="Ej: 50mm Ø"></div>
