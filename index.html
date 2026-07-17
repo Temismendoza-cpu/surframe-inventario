@@ -61,6 +61,8 @@ main{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
 .btn-danger{background:#c0392b;color:#fff}.btn-danger:hover{background:#a93226}
 .btn-outline{background:#fff;color:#111;border:1px solid #ccc}.btn-outline:hover{background:#f4f4f4}
 .btn-sm{padding:5px 10px;font-size:12px}
+.btn-in{background:#e8f8f0;color:#1a7a45;border:1px solid #bfe6cf}.btn-in:hover{background:#d5f2e3}
+.btn-out{background:#fdedec;color:#921f1a;border:1px solid #f2c6c4}.btn-out:hover{background:#fbdcda}
 .btn-logout{background:none;border:1px solid #ddd;padding:6px 12px;border-radius:var(--r);cursor:pointer;font-size:13px;color:#666;transition:.15s}.btn-logout:hover{background:#f0f0f0}
 
 /* ── TABLE ── */
@@ -231,7 +233,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <table>
           <thead><tr>
             <th>Código</th><th>Nombre</th><th>Categoría</th>
-            <th>Cant.</th><th>Unidad</th><th>Estado</th>
+            <th>Cant.</th><th>Unidad</th><th>Estado</th><th>Egreso</th>
           </tr></thead>
           <tbody id="ins-tbl-body"></tbody>
         </table>
@@ -365,6 +367,24 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-pieza')">Cancelar</button>
       <button class="btn btn-primary" id="mp-save" onclick="savePiece()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL MOVIMIENTO (ingreso / egreso) ════ -->
+<div class="overlay" id="mo-mov">
+  <div class="modal" style="max-width:360px">
+    <h2 id="mv-title">Ingreso de stock</h2>
+    <p id="mv-info" style="font-size:14px;color:#444;margin-bottom:1.2rem;line-height:1.5"></p>
+    <div class="form-group">
+      <label id="mv-lbl">Cantidad a ingresar</label>
+      <input id="mv-qty" type="number" min="1" placeholder="0" oninput="movPreview()" onkeydown="if(event.key==='Enter')confirmMov()">
+    </div>
+    <p id="mv-preview" style="font-size:14px;color:#444;margin-top:12px;min-height:22px"></p>
+    <div class="modal-err" id="mv-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-mov')">Cancelar</button>
+      <button class="btn btn-primary" id="mv-save" onclick="confirmMov()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -635,8 +655,10 @@ function renderAdminTable(){
     <td style="color:#999;font-size:12px">${d.min}</td>
     <td style="color:#666;font-size:12px">$${Number(d.precio||0).toLocaleString('es-CL')}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="openPieceModal(${d.id})">✏ Editar</button>
-      <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deletePiece(${d.id})">✕</button>
+      <button class="btn btn-in btn-sm" onclick="openMov('piece',${d.id},'in')">＋ Ingreso</button>
+      <button class="btn btn-out btn-sm" style="margin-left:3px" onclick="openMov('piece',${d.id},'out')">－ Salida</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:3px" onclick="openPieceModal(${d.id})">✏</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="deletePiece(${d.id})">✕</button>
     </td>
   </tr>`).join('');
 }
@@ -841,6 +863,7 @@ function renderInsTable(){
     <td><strong style="font-size:15px">${d.qty}</strong></td>
     <td style="color:#aaa;font-size:12px">${d.unit}</td>
     <td>${stockBadge(d)}</td>
+    <td><button class="btn btn-out btn-sm" onclick="openMov('insumo',${d.id},'out')">－ Egreso</button></td>
   </tr>`).join('');
 }
 
@@ -859,8 +882,10 @@ function renderAdminInsTable(){
     <td style="color:#999;font-size:12px">${d.min}</td>
     <td style="color:#666;font-size:12px">$${Number(d.precio||0).toLocaleString('es-CL')}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="openInsModal(${d.id})">✏ Editar</button>
-      <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteInsumo(${d.id})">✕</button>
+      <button class="btn btn-in btn-sm" onclick="openMov('insumo',${d.id},'in')">＋ Ingreso</button>
+      <button class="btn btn-out btn-sm" style="margin-left:3px" onclick="openMov('insumo',${d.id},'out')">－ Salida</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:3px" onclick="openInsModal(${d.id})">✏</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="deleteInsumo(${d.id})">✕</button>
     </td>
   </tr>`).join('');
 }
@@ -935,6 +960,61 @@ function exportInsCSV(){
   a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
   a.download='surframe-insumos.csv';
   a.click();
+}
+
+/* ═══════════════ MOVIMIENTOS DE STOCK ═══════════════ */
+let mov={entity:'piece',id:null,type:'in'};
+
+function movList(){ return mov.entity==='insumo'?getIns():getInv(); }
+
+function openMov(entity,id,type){
+  const d=(entity==='insumo'?getIns():getInv()).find(x=>x.id===id);
+  if(!d)return;
+  mov={entity,id,type};
+  const esIn=type==='in';
+  document.getElementById('mv-title').textContent = esIn?'Ingreso de stock':'Egreso de stock';
+  document.getElementById('mv-lbl').textContent   = esIn?'Cantidad a ingresar':'Cantidad a retirar';
+  document.getElementById('mv-info').innerHTML =
+    `<strong>${d.nombre}</strong> <span style="color:#888">(${d.codigo})</span><br>Stock actual: <strong>${d.qty}</strong> ${d.unit}`;
+  document.getElementById('mv-qty').value='';
+  document.getElementById('mv-err').textContent='';
+  document.getElementById('mv-preview').textContent='';
+  const btn=document.getElementById('mv-save');
+  btn.textContent = esIn?'Confirmar ingreso':'Confirmar egreso';
+  btn.style.background = esIn?'#1a7a45':'#c0392b';
+  document.getElementById('mo-mov').classList.add('open');
+  setTimeout(()=>document.getElementById('mv-qty').focus(),50);
+}
+
+function movPreview(){
+  const d=movList().find(x=>x.id===mov.id); if(!d)return;
+  const n=parseInt(document.getElementById('mv-qty').value)||0;
+  const el=document.getElementById('mv-preview');
+  if(n<=0){ el.textContent=''; return; }
+  const nuevo = mov.type==='in' ? Number(d.qty)+n : Number(d.qty)-n;
+  if(mov.type==='out' && nuevo<0){
+    el.innerHTML=`<span style="color:#c0392b">No puedes retirar más de ${d.qty}.</span>`; return;
+  }
+  el.innerHTML = `Nuevo total: <strong style="font-size:17px">${nuevo}</strong> ${d.unit}`;
+}
+
+async function confirmMov(){
+  const d=movList().find(x=>x.id===mov.id); if(!d)return;
+  const n=parseInt(document.getElementById('mv-qty').value)||0;
+  const err=document.getElementById('mv-err');
+  if(n<=0){ err.textContent='Ingresa una cantidad válida.'; return; }
+  const nuevo = mov.type==='in' ? Number(d.qty)+n : Number(d.qty)-n;
+  if(nuevo<0){ err.textContent='No puedes retirar más de lo que hay en stock.'; return; }
+  if(mov.entity==='insumo' && !insumosReady){ err.textContent='Falta activar la hoja de Insumos en el backend.'; return; }
+  const item={...d, qty:nuevo};
+  const btn=document.getElementById('mv-save'); btn.disabled=true;
+  try{
+    await apiPost({type:mov.entity, action:'save', item});
+    closeMo('mo-mov');
+    if(mov.entity==='insumo'){ renderInsTable(); renderInsStats(); renderAdminInsTable(); }
+    else { renderTable(); renderStats(); renderAdminTable(); }
+  }catch(e){ err.textContent='Error: '+e.message; }
+  btn.disabled=false;
 }
 
 /* ═══ MODAL HELPERS ═══ */
