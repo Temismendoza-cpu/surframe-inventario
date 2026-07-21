@@ -472,6 +472,7 @@ let USERS = [];
 let INV   = [];
 let INS   = [];
 let insumosReady = false;
+let backendVersion = '?';
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
@@ -484,6 +485,8 @@ async function apiGet(){
   INV   = toArr(j.data.inventory);
   INS   = toArr(j.data.insumos);
   insumosReady = Object.prototype.hasOwnProperty.call(j.data,'insumos');
+  backendVersion = j.version || 'v1 (antigua)';
+  console.log('Backend Surframe:', backendVersion);
 }
 
 async function apiPost(payload){
@@ -492,9 +495,12 @@ async function apiPost(payload){
   const j = await r.json();
   hideSync();
   if(!j.ok) throw new Error(j.error||'Error al guardar');
-  USERS = toArr(j.data.users);
-  INV   = toArr(j.data.inventory);
-  INS   = toArr(j.data.insumos);
+  /* Solo actualiza las colecciones que vengan en la respuesta
+     (compatible con backend que devuelve todo o solo lo modificado) */
+  const d=j.data||{}, has=(k)=>Object.prototype.hasOwnProperty.call(d,k);
+  if(has('users'))     USERS = toArr(d.users);
+  if(has('inventory')) INV   = toArr(d.inventory);
+  if(has('insumos'))   INS   = toArr(d.insumos);
 }
 
 function getUsers(){ return USERS; }
