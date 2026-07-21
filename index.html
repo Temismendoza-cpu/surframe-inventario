@@ -463,7 +463,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 /* ═══════════════════════════════════════════════════════════════════
    CONFIGURACIÓN — pega aquí la URL del Web App de Google Apps Script
    ═══════════════════════════════════════════════════════════════════ */
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby5KH_fM9SkX4UWcuHG2NgDjHp-FHNqVzWckWn2OzixiMq7KzljTVibtwqAWwCmvMCMkw/exec';
+const FB_URL = 'https://surframe-b6f8e-default-rtdb.firebaseio.com';
 
 const SESS_KEY = 'sf_session';
 
@@ -477,30 +477,55 @@ let backendVersion = '?';
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
 
-async function apiGet(){
-  const r = await fetch(SCRIPT_URL, {method:'GET'});
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error||'Error de lectura');
-  USERS = toArr(j.data.users);
-  INV   = toArr(j.data.inventory);
-  INS   = toArr(j.data.insumos);
-  insumosReady = Object.prototype.hasOwnProperty.call(j.data,'insumos');
-  backendVersion = j.version || 'v1 (antigua)';
-  console.log('Backend Surframe:', backendVersion);
+/* Ruta en Firebase según el tipo de dato */
+function fbPath(type){
+  return type==='user' ? 'users' : type==='insumo' ? 'insumos' : 'inventory';
+}
+function fbList(type){
+  return type==='user' ? USERS : type==='insumo' ? INS : INV;
+}
+function fbSetList(type, arr){
+  if(type==='user') USERS = arr; else if(type==='insumo') INS = arr; else INV = arr;
 }
 
+/* Lee TODA la base en una sola petición (~200ms) */
+async function apiGet(){
+  const r = await fetch(FB_URL + '/.json');
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j = (await r.json()) || {};
+  USERS = toArr(j.users);
+  INV   = toArr(j.inventory);
+  INS   = toArr(j.insumos);
+  insumosReady = true;
+  backendVersion = 'firebase';
+}
+
+/* Guarda o borra UN solo registro (payload mínimo = muy rápido) */
 async function apiPost(payload){
+  const type = payload.type;
+  const path = fbPath(type);
   showSync('Guardando…');
-  const r = await fetch(SCRIPT_URL, {method:'POST', body: JSON.stringify(payload)});
-  const j = await r.json();
-  hideSync();
-  if(!j.ok) throw new Error(j.error||'Error al guardar');
-  /* Solo actualiza las colecciones que vengan en la respuesta
-     (compatible con backend que devuelve todo o solo lo modificado) */
-  const d=j.data||{}, has=(k)=>Object.prototype.hasOwnProperty.call(d,k);
-  if(has('users'))     USERS = toArr(d.users);
-  if(has('inventory')) INV   = toArr(d.inventory);
-  if(has('insumos'))   INS   = toArr(d.insumos);
+  try{
+    if(payload.action==='delete'){
+      const r = await fetch(`${FB_URL}/${path}/${payload.id}.json`, {method:'DELETE'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      fbSetList(type, fbList(type).filter(x=>Number(x.id)!==Number(payload.id)));
+    }else{
+      const item = {...payload.item};
+      if(!item.id){
+        item.id = fbList(type).reduce((m,x)=>Math.max(m, Number(x.id)||0), 0) + 1;
+      }
+      item.id = Number(item.id);
+      const r = await fetch(`${FB_URL}/${path}/${item.id}.json`, {
+        method:'PUT', body: JSON.stringify(item)
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const arr = fbList(type).slice();
+      const i = arr.findIndex(x=>Number(x.id)===item.id);
+      if(i>=0) arr[i]=item; else arr.push(item);
+      fbSetList(type, arr);
+    }
+  } finally { hideSync(); }
 }
 
 function getUsers(){ return USERS; }
@@ -1055,9 +1080,9 @@ function exportCSV(){
 async function init(){
   const info=document.getElementById('l-info');
   const btn=document.getElementById('l-btn');
-  if(SCRIPT_URL.indexOf('PEGAR_URL')>=0){
+  if(FB_URL.indexOf('__FIREBASE') >= 0){
     info.style.color='#c0392b';
-    info.textContent='⚠ Falta configurar la URL del script.';
+    info.textContent='⚠ Falta configurar la URL de Firebase.';
     return;
   }
   try{
