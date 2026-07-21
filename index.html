@@ -998,6 +998,11 @@ function movPreview(){
   el.innerHTML = `Nuevo total: <strong style="font-size:17px">${nuevo}</strong> ${d.unit}`;
 }
 
+function renderFor(entity){
+  if(entity==='insumo'){ renderInsTable(); renderInsStats(); renderAdminInsTable(); }
+  else { renderTable(); renderStats(); renderAdminTable(); }
+}
+
 async function confirmMov(){
   const d=movList().find(x=>x.id===mov.id); if(!d)return;
   const n=parseInt(document.getElementById('mv-qty').value)||0;
@@ -1006,15 +1011,22 @@ async function confirmMov(){
   const nuevo = mov.type==='in' ? Number(d.qty)+n : Number(d.qty)-n;
   if(nuevo<0){ err.textContent='No puedes retirar más de lo que hay en stock.'; return; }
   if(mov.entity==='insumo' && !insumosReady){ err.textContent='Falta activar la hoja de Insumos en el backend.'; return; }
+
+  /* Actualización optimista: se ve el cambio al instante y se guarda en segundo plano */
+  const entity=mov.entity, prevQty=Number(d.qty);
   const item={...d, qty:nuevo};
-  const btn=document.getElementById('mv-save'); btn.disabled=true;
+  d.qty = nuevo;
+  closeMo('mo-mov');
+  renderFor(entity);
+  showSync('Guardando…');
   try{
-    await apiPost({type:mov.entity, action:'save', item});
-    closeMo('mo-mov');
-    if(mov.entity==='insumo'){ renderInsTable(); renderInsStats(); renderAdminInsTable(); }
-    else { renderTable(); renderStats(); renderAdminTable(); }
-  }catch(e){ err.textContent='Error: '+e.message; }
-  btn.disabled=false;
+    await apiPost({type:entity, action:'save', item});
+    renderFor(entity);
+  }catch(e){
+    d.qty = prevQty;
+    renderFor(entity);
+    alert('No se pudo guardar el movimiento: '+e.message+'\nEl stock se restauró a '+prevQty+'.');
+  }
 }
 
 /* ═══ MODAL HELPERS ═══ */
