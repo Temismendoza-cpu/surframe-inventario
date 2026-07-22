@@ -91,6 +91,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
 /* ── MODAL ── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
 .overlay.open{display:flex}
+/* El modal de cliente debe quedar por delante del de guía de despacho */
+#mo-cliente{z-index:320}
 .modal{background:#fff;border-radius:14px;padding:2rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;margin:1rem}
 .modal h2{font-size:17px;font-weight:700;margin-bottom:1.5rem;padding-bottom:12px;border-bottom:1px solid #eee}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -103,7 +105,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .modal-err{color:var(--danger);font-size:13px;margin-top:8px}
 
 /* ── TOAST / SYNC ── */
-#sync{position:fixed;bottom:16px;right:16px;background:#111;color:#fff;font-size:13px;padding:8px 16px;border-radius:20px;opacity:0;transition:.3s;z-index:300;pointer-events:none}
+#sync{position:fixed;bottom:16px;right:16px;background:#111;color:#fff;font-size:13px;padding:8px 16px;border-radius:20px;opacity:0;transition:.3s;z-index:400;pointer-events:none}
 #sync.show{opacity:1}
 
 @media(max-width:600px){
@@ -452,7 +454,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <input id="gd-buscar" type="text" placeholder="🔍 Buscar repuesto por código, nombre o modelo…" oninput="filtrarPiezasGuia()"
              style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;margin-bottom:8px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="gd-pieza" size="5" style="flex:2;min-width:250px;padding:6px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none" ondblclick="addGuiaItem()"></select>
+        <select id="gd-pieza" style="flex:2;min-width:250px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none"></select>
         <input id="gd-cant" type="number" min="1" placeholder="Cant." style="width:95px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();addGuiaItem();}">
         <button class="btn btn-in" onclick="addGuiaItem()">＋ Agregar</button>
       </div>
