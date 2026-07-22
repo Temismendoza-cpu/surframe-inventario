@@ -247,6 +247,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <button class="atab active" onclick="switchAdminTab('inv')">Inventario</button>
         <button class="atab"        onclick="switchAdminTab('ins')">Insumos</button>
         <button class="atab"        onclick="switchAdminTab('usr')">Usuarios</button>
+        <button class="atab"        onclick="switchAdminTab('emp')">Empresa</button>
       </div>
 
       <div class="atab-panel active" id="atab-inv">
@@ -305,6 +306,44 @@ tbody td{padding:10px 14px;vertical-align:middle}
             <tbody id="usr-tbl"></tbody>
           </table>
           <div class="empty" id="usr-empty" style="display:none">No hay usuarios.</div>
+        </div>
+      </div>
+
+      <div class="atab-panel" id="atab-emp">
+        <div class="section-hd">
+          <h3>Logo de la empresa</h3>
+        </div>
+        <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:1.25rem;margin-bottom:2rem">
+          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+            <div style="width:120px;height:90px;border:1px dashed #ddd;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#fafafa">
+              <img id="emp-logo-prev" alt="Logo" style="max-width:110px;max-height:80px;display:none">
+              <span id="emp-logo-none" style="color:#bbb;font-size:12px">Sin logo</span>
+            </div>
+            <div>
+              <input type="file" id="emp-logo" accept="image/png,image/jpeg" onchange="subirLogo(event)" style="display:none">
+              <button class="btn btn-primary" onclick="document.getElementById('emp-logo').click()">🖼 Cargar logo (PNG)</button>
+              <button class="btn btn-outline" id="emp-logo-del" onclick="quitarLogo()" style="margin-left:6px;display:none">Quitar</button>
+              <div style="color:#999;font-size:12px;margin-top:8px">Aparece en todas las guías de despacho. PNG o JPG, máx. 900 KB.</div>
+              <div class="modal-err" id="emp-err"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-hd">
+          <h3>Clientes</h3>
+          <button class="btn btn-primary" onclick="openClienteModal()">+ Agregar cliente</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="adm-cli-search" placeholder="Buscar cliente…" oninput="renderClientesTable()">
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Cliente</th><th>RUT</th><th>Dirección</th><th>Contacto</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="cli-tbl"></tbody>
+          </table>
+          <div class="empty" id="cli-empty" style="display:none">No hay clientes registrados.</div>
         </div>
       </div>
     </div>
@@ -374,6 +413,24 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL CLIENTE ════ -->
+<div class="overlay" id="mo-cliente">
+  <div class="modal" style="max-width:440px">
+    <h2 id="mc-title">Agregar cliente</h2>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="form-group"><label>Nombre / Razón social *</label><input id="mc-nombre" placeholder="Ej: Alimentos del Sur SpA"></div>
+      <div class="form-group"><label>RUT</label><input id="mc-rut" placeholder="Ej: 76.543.210-9"></div>
+      <div class="form-group"><label>Dirección</label><input id="mc-dir" placeholder="Ej: Av. Industrial 1234, Puerto Montt"></div>
+      <div class="form-group"><label>Contacto (teléfono o email)</label><input id="mc-contacto" placeholder="Ej: +56 9 1234 5678"></div>
+    </div>
+    <div class="modal-err" id="mc-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-cliente')">Cancelar</button>
+      <button class="btn btn-primary" id="mc-save" onclick="saveCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL GUÍA DE DESPACHO ════ -->
 <div class="overlay" id="mo-guia">
   <div class="modal" style="max-width:700px">
@@ -381,28 +438,25 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="form-grid">
       <div class="form-group"><label>N° de guía (automático)</label><input id="gd-num" readonly style="background:#f4f4f4;font-weight:600"></div>
       <div class="form-group"><label>Fecha de emisión</label><input id="gd-fecha" type="date"></div>
-      <div class="form-group full"><label>Cliente a despachar *</label><input id="gd-cliente" placeholder="Nombre del cliente o empresa"></div>
+      <div class="form-group full"><label>Cliente a despachar *</label>
+        <div style="display:flex;gap:8px">
+          <select id="gd-cliente" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
+          <button class="btn btn-outline" onclick="openClienteModal(null,true)" title="Agregar cliente nuevo">+ Nuevo</button>
+        </div>
+      </div>
       <div class="form-group full"><label>Emitida por</label><input id="gd-emisor" readonly style="background:#f4f4f4"></div>
     </div>
 
     <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
       <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Productos a despachar</label>
+      <input id="gd-buscar" type="text" placeholder="🔍 Buscar repuesto por código, nombre o modelo…" oninput="filtrarPiezasGuia()"
+             style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;margin-bottom:8px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="gd-pieza" style="flex:2;min-width:230px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none"></select>
+        <select id="gd-pieza" size="5" style="flex:2;min-width:250px;padding:6px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none" ondblclick="addGuiaItem()"></select>
         <input id="gd-cant" type="number" min="1" placeholder="Cant." style="width:95px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();addGuiaItem();}">
         <button class="btn btn-in" onclick="addGuiaItem()">＋ Agregar</button>
       </div>
       <div id="gd-lista" style="margin-top:12px"></div>
-    </div>
-
-    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
-      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Logo de la empresa</label>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <input type="file" id="gd-logo" accept="image/png,image/jpeg" onchange="subirLogo(event)" style="font-size:13px;max-width:230px">
-        <img id="gd-logo-prev" alt="Logo" style="max-height:46px;max-width:120px;display:none;border:1px solid #eee;border-radius:4px;padding:2px">
-        <button class="btn btn-outline btn-sm" id="gd-logo-del" onclick="quitarLogo()" style="display:none">Quitar</button>
-      </div>
-      <small style="color:#999;font-size:12px;display:block;margin-top:6px">Se guarda una sola vez y aparece en todas las guías. PNG o JPG, máx. 900 KB.</small>
     </div>
 
     <div class="modal-err" id="gd-err"></div>
@@ -519,34 +573,41 @@ let INS   = [];
 let insumosReady = false;
 let backendVersion = '?';
 let CONFIG = {};
+let CLIENTES = [];
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
 
 /* Ruta en Firebase según el tipo de dato */
 function fbPath(type){
-  return type==='user' ? 'users' : type==='insumo' ? 'insumos' : 'inventory';
+  return type==='user' ? 'users' : type==='insumo' ? 'insumos'
+       : type==='cliente' ? 'clientes' : 'inventory';
 }
 function fbList(type){
-  return type==='user' ? USERS : type==='insumo' ? INS : INV;
+  return type==='user' ? USERS : type==='insumo' ? INS
+       : type==='cliente' ? CLIENTES : INV;
 }
 function fbSetList(type, arr){
-  if(type==='user') USERS = arr; else if(type==='insumo') INS = arr; else INV = arr;
+  if(type==='user') USERS = arr;
+  else if(type==='insumo') INS = arr;
+  else if(type==='cliente') CLIENTES = arr;
+  else INV = arr;
 }
 
 /* Lee las colecciones en paralelo (~200ms). No descarga el historial de guías. */
 async function apiGet(){
-  const paths = ['users','inventory','insumos','config'];
+  const paths = ['users','inventory','insumos','config','clientes'];
   const res = await Promise.all(paths.map(p =>
     fetch(`${FB_URL}/${p}.json`).then(r=>{
       if(!r.ok) throw new Error('HTTP '+r.status);
       return r.json();
     })
   ));
-  USERS  = toArr(res[0]);
-  INV    = toArr(res[1]);
-  INS    = toArr(res[2]);
-  CONFIG = res[3] || {};
+  USERS    = toArr(res[0]);
+  INV      = toArr(res[1]);
+  INS      = toArr(res[2]);
+  CONFIG   = res[3] || {};
+  CLIENTES = toArr(res[4]);
   insumosReady = true;
   backendVersion = 'firebase';
 }
@@ -646,15 +707,15 @@ function showPage(p){
   document.getElementById('page-'+p).classList.add('active');
   if(p==='inventario'){ populateCatFilter(); renderStats(); renderTable(); }
   if(p==='insumos'){ populateInsCatFilter(); renderInsStats(); renderInsTable(); }
-  if(p==='admin'){ renderAdminTable(); renderAdminInsTable(); renderUserTable(); }
+  if(p==='admin'){ renderAdminTable(); renderAdminInsTable(); renderUserTable(); renderClientesTable(); renderLogoPrev(); }
 }
 
 function switchAdminTab(t){
-  const order={inv:0,ins:1,usr:2};
+  const order={inv:0,ins:1,usr:2,emp:3};
   document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('active',i===order[t]));
-  document.getElementById('atab-inv').classList.toggle('active',t==='inv');
-  document.getElementById('atab-ins').classList.toggle('active',t==='ins');
-  document.getElementById('atab-usr').classList.toggle('active',t==='usr');
+  ['inv','ins','usr','emp'].forEach(k=>
+    document.getElementById('atab-'+k).classList.toggle('active', t===k));
+  if(t==='emp'){ renderLogoPrev(); renderClientesTable(); }
 }
 
 /* ═══ STATS ═══ */
@@ -1060,21 +1121,46 @@ function fmtFecha(iso){
   return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
 }
 
+function dimsOf(p){
+  return [p.d1,p.d2,p.d3].filter(Boolean).join(' / ');
+}
+
+function llenarClientesGuia(){
+  const sel=document.getElementById('gd-cliente');
+  const cur=sel.value;
+  const lista=CLIENTES.slice().sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
+  sel.innerHTML = lista.length
+    ? '<option value="">— Selecciona un cliente —</option>' +
+      lista.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('')
+    : '<option value="">No hay clientes. Usa "+ Nuevo"</option>';
+  sel.value=cur;
+}
+
+function filtrarPiezasGuia(){
+  const q=(document.getElementById('gd-buscar').value||'').toLowerCase().trim();
+  const sel=document.getElementById('gd-pieza');
+  const lista=getInv().slice()
+    .filter(p=>!q || [p.codigo,p.nombre,p.modelo,p.categoria,dimsOf(p)].join(' ').toLowerCase().includes(q))
+    .sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
+  sel.innerHTML = lista.length
+    ? lista.map(p=>`<option value="${p.id}">${p.codigo} — ${p.nombre}${p.modelo?' · '+p.modelo:''} (stock: ${p.qty} ${p.unit||''})</option>`).join('')
+    : '<option value="">Sin resultados</option>';
+  if(lista.length===1) sel.value=String(lista[0].id);
+}
+
 function openGuiaModal(){
   if(!esAdmin()){ alert('Solo los administradores pueden generar guías de despacho.'); return; }
   guiaItems=[];
   document.getElementById('gd-err').textContent='';
-  document.getElementById('gd-cliente').value='';
   document.getElementById('gd-cant').value='';
+  document.getElementById('gd-buscar').value='';
   document.getElementById('gd-fecha').value=new Date().toISOString().slice(0,10);
   document.getElementById('gd-emisor').value=currentUser.name;
   document.getElementById('gd-num').value=numGuia();
-  const sel=document.getElementById('gd-pieza');
-  sel.innerHTML = getInv().slice()
-    .sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)))
-    .map(p=>`<option value="${p.id}">${p.codigo} — ${p.nombre} (stock: ${p.qty} ${p.unit||''})</option>`).join('');
+  llenarClientesGuia();
+  document.getElementById('gd-cliente').value='';
+  filtrarPiezasGuia();
   renderGuiaLista();
-  renderLogoPrev();
   document.getElementById('mo-guia').classList.add('open');
 }
 
@@ -1092,7 +1178,8 @@ function addGuiaItem(){
   }
   const ex=guiaItems.find(i=>i.id===id);
   if(ex) ex.cantidad+=cant;
-  else guiaItems.push({id, codigo:p.codigo, nombre:p.nombre, unit:p.unit||'', cantidad:cant});
+  else guiaItems.push({id, codigo:p.codigo, nombre:p.nombre, modelo:p.modelo||'',
+                       dims:dimsOf(p), unit:p.unit||'', cantidad:cant});
   document.getElementById('gd-cant').value='';
   renderGuiaLista();
 }
@@ -1112,23 +1199,27 @@ function renderGuiaLista(){
       <th style="padding:6px 8px">Cantidad</th><th></th>
     </tr></thead>
     <tbody>${guiaItems.map(i=>`<tr style="border-bottom:1px solid #f0f0f0">
-      <td style="padding:6px 8px"><code style="font-size:12px">${i.codigo}</code></td>
-      <td style="padding:6px 8px">${i.nombre}</td>
-      <td style="padding:6px 8px;text-align:center"><strong>${i.cantidad}</strong> <span style="color:#aaa;font-size:11px">${i.unit}</span></td>
+      <td style="padding:6px 8px;vertical-align:top"><code style="font-size:12px">${i.codigo}</code></td>
+      <td style="padding:6px 8px">${i.nombre}
+        ${(i.modelo||i.dims)?`<br><small style="color:#aaa">${[i.modelo,i.dims].filter(Boolean).join(' · ')}</small>`:''}</td>
+      <td style="padding:6px 8px;text-align:center;vertical-align:top"><strong>${i.cantidad}</strong> <span style="color:#aaa;font-size:11px">${i.unit}</span></td>
       <td style="padding:6px 8px;text-align:right"><button class="btn btn-danger btn-sm" onclick="removeGuiaItem(${i.id})">✕</button></td>
     </tr>`).join('')}</tbody></table>`;
 }
 
-/* ── Logo ── */
+/* ═══ LOGO DE LA EMPRESA (pestaña Empresa) ═══ */
 function renderLogoPrev(){
-  const img=document.getElementById('gd-logo-prev'), del=document.getElementById('gd-logo-del');
-  if(CONFIG.logo){ img.src=CONFIG.logo; img.style.display=''; del.style.display=''; }
-  else { img.style.display='none'; del.style.display='none'; }
+  const img=document.getElementById('emp-logo-prev');
+  const none=document.getElementById('emp-logo-none');
+  const del=document.getElementById('emp-logo-del');
+  if(!img) return;
+  if(CONFIG.logo){ img.src=CONFIG.logo; img.style.display=''; none.style.display='none'; del.style.display=''; }
+  else { img.style.display='none'; none.style.display=''; del.style.display='none'; }
 }
 
 async function subirLogo(ev){
   const f=ev.target.files && ev.target.files[0]; if(!f) return;
-  const err=document.getElementById('gd-err'); err.textContent='';
+  const err=document.getElementById('emp-err'); err.textContent='';
   if(f.size > 900*1024){ err.textContent='La imagen pesa más de 900 KB. Usa una más liviana.'; ev.target.value=''; return; }
   const dataUrl=await new Promise((res,rej)=>{
     const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);
@@ -1143,22 +1234,96 @@ async function subirLogo(ev){
 }
 
 async function quitarLogo(){
+  if(!confirm('¿Quitar el logo de la empresa?')) return;
   showSync('Quitando logo…');
   try{
     await fetch(`${FB_URL}/config/logo.json`,{method:'DELETE'});
     CONFIG.logo=null;
-    document.getElementById('gd-logo').value='';
+    document.getElementById('emp-logo').value='';
     renderLogoPrev();
   }finally{ hideSync(); }
+}
+
+/* ═══ CLIENTES ═══ */
+let editClienteId=null;
+let clienteDesdeGuia=false;
+
+function renderClientesTable(){
+  const tbody=document.getElementById('cli-tbl');
+  const empty=document.getElementById('cli-empty');
+  if(!tbody) return;
+  const q=(document.getElementById('adm-cli-search')?.value||'').toLowerCase();
+  const data=CLIENTES.filter(c=>!q||[c.nombre,c.rut,c.direccion,c.contacto].join(' ').toLowerCase().includes(q));
+  if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(c=>`<tr>
+    <td><strong>${c.nombre}</strong></td>
+    <td style="color:#666;font-size:13px">${c.rut||'—'}</td>
+    <td style="color:#666;font-size:13px">${c.direccion||'—'}</td>
+    <td style="color:#666;font-size:13px">${c.contacto||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openClienteModal(${c.id})">✏</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteCliente(${c.id})">✕</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openClienteModal(id=null, desdeGuia=false){
+  if(!esAdmin()){ alert('Solo los administradores pueden gestionar clientes.'); return; }
+  editClienteId=id; clienteDesdeGuia=desdeGuia;
+  document.getElementById('mc-title').textContent=id?'Editar cliente':'Agregar cliente';
+  document.getElementById('mc-err').textContent='';
+  const c = id ? CLIENTES.find(x=>Number(x.id)===Number(id)) : null;
+  document.getElementById('mc-nombre').value   = c ? c.nombre    : '';
+  document.getElementById('mc-rut').value      = c ? (c.rut||'')       : '';
+  document.getElementById('mc-dir').value      = c ? (c.direccion||'') : '';
+  document.getElementById('mc-contacto').value = c ? (c.contacto||'')  : '';
+  document.getElementById('mo-cliente').classList.add('open');
+}
+
+async function saveCliente(){
+  const err=document.getElementById('mc-err'); err.textContent='';
+  const nombre=document.getElementById('mc-nombre').value.trim();
+  if(!nombre){ err.textContent='El nombre del cliente es obligatorio.'; return; }
+  const dup=CLIENTES.find(c=>String(c.nombre).toLowerCase()===nombre.toLowerCase() && Number(c.id)!==Number(editClienteId));
+  if(dup){ err.textContent='Ya existe un cliente con ese nombre.'; return; }
+  const item={
+    nombre,
+    rut:document.getElementById('mc-rut').value.trim(),
+    direccion:document.getElementById('mc-dir').value.trim(),
+    contacto:document.getElementById('mc-contacto').value.trim()
+  };
+  if(editClienteId) item.id=Number(editClienteId);
+  const btn=document.getElementById('mc-save'); btn.disabled=true;
+  try{
+    await apiPost({type:'cliente', action:'save', item});
+    closeMo('mo-cliente');
+    renderClientesTable();
+    if(clienteDesdeGuia){
+      llenarClientesGuia();
+      const nuevo=CLIENTES.find(c=>String(c.nombre).toLowerCase()===nombre.toLowerCase());
+      if(nuevo) document.getElementById('gd-cliente').value=String(nuevo.id);
+    }
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  btn.disabled=false;
+}
+
+async function deleteCliente(id){
+  const c=CLIENTES.find(x=>Number(x.id)===Number(id)); if(!c) return;
+  if(!confirm(`¿Eliminar el cliente "${c.nombre}"?`)) return;
+  try{ await apiPost({type:'cliente', action:'delete', id:Number(id)}); renderClientesTable(); }
+  catch(e){ alert('Error al eliminar: '+e.message); }
 }
 
 /* ── Generar ── */
 async function generarGuia(){
   const err=document.getElementById('gd-err'); err.textContent='';
   if(!esAdmin()){ err.textContent='Solo los administradores pueden generar guías.'; return; }
-  const cliente=document.getElementById('gd-cliente').value.trim();
+  const cliId=document.getElementById('gd-cliente').value;
+  const cli=CLIENTES.find(c=>String(c.id)===String(cliId));
+  const cliente=cli?cli.nombre:'';
   const fecha=document.getElementById('gd-fecha').value;
-  if(!cliente){ err.textContent='Indica el cliente a despachar.'; return; }
+  if(!cliente){ err.textContent='Selecciona el cliente a despachar (o crea uno con "+ Nuevo").'; return; }
   if(!guiaItems.length){ err.textContent='Agrega al menos un producto.'; return; }
   for(const it of guiaItems){
     const p=getInv().find(x=>Number(x.id)===it.id);
@@ -1175,8 +1340,11 @@ async function generarGuia(){
       await apiPost({type:'piece', action:'save', item:{...p, qty:Number(p.qty)-it.cantidad}});
     }
     // 2) Guardar el registro de la guía e incrementar el correlativo
-    const registro={numero, fecha, cliente, emitidoPor:currentUser.name,
-                    items:guiaItems.map(i=>({codigo:i.codigo,nombre:i.nombre,cantidad:i.cantidad,unit:i.unit})),
+    const registro={numero, fecha, cliente,
+                    clienteRut:(cli&&cli.rut)||'', clienteDir:(cli&&cli.direccion)||'',
+                    emitidoPor:currentUser.name,
+                    items:guiaItems.map(i=>({codigo:i.codigo,nombre:i.nombre,modelo:i.modelo||'',
+                                             dims:i.dims||'',cantidad:i.cantidad,unit:i.unit})),
                     creado:new Date().toISOString()};
     await fetch(`${FB_URL}/guias/${numero}.json`,{method:'PUT',body:JSON.stringify(registro)});
     const sig=(Number(CONFIG.nextGuia)||1)+1;
@@ -1216,15 +1384,29 @@ function crearPDF(g){
   };
   fila('Fecha de emisión:', fmtFecha(g.fecha));
   fila('Cliente:',          g.cliente);
+  if(g.clienteRut) fila('RUT:',       g.clienteRut);
+  if(g.clienteDir) fila('Dirección:', g.clienteDir);
   fila('Emitida por:',      g.emitidoPor);
 
   doc.autoTable({
     startY: y + 4,
-    head: [['Código','Descripción','Cantidad','Unidad']],
-    body: g.items.map(i=>[i.codigo, i.nombre, String(i.cantidad), i.unit||'']),
-    styles:{ fontSize:9, cellPadding:2.6, lineColor:[225,225,225], lineWidth:0.1 },
-    headStyles:{ fillColor:[17,17,17], textColor:255, fontStyle:'bold' },
-    columnStyles:{ 2:{halign:'center',cellWidth:22}, 3:{halign:'center',cellWidth:24} },
+    head: [['Código','Producto','Modelo','Dimensiones','Cant.']],
+    body: g.items.map(i=>[
+      i.codigo,
+      i.nombre,
+      i.modelo || '—',
+      i.dims   || '—',
+      String(i.cantidad) + (i.unit ? '\n'+i.unit : '')
+    ]),
+    styles:{ fontSize:8.5, cellPadding:2.4, lineColor:[225,225,225], lineWidth:0.1, valign:'middle' },
+    headStyles:{ fillColor:[17,17,17], textColor:255, fontStyle:'bold', fontSize:8.5 },
+    columnStyles:{
+      0:{cellWidth:22},
+      1:{cellWidth:58},
+      2:{cellWidth:36},
+      3:{cellWidth:42},
+      4:{halign:'center', cellWidth:22, fontStyle:'bold'}
+    },
     margin:{left:15,right:15}
   });
 
