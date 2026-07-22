@@ -250,6 +250,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <button class="atab"        onclick="switchAdminTab('ins')">Insumos</button>
         <button class="atab"        onclick="switchAdminTab('usr')">Usuarios</button>
         <button class="atab"        onclick="switchAdminTab('emp')">Empresa</button>
+        <button class="atab"        onclick="switchAdminTab('gui')">Guías</button>
       </div>
 
       <div class="atab-panel active" id="atab-inv">
@@ -346,6 +347,26 @@ tbody td{padding:10px 14px;vertical-align:middle}
             <tbody id="cli-tbl"></tbody>
           </table>
           <div class="empty" id="cli-empty" style="display:none">No hay clientes registrados.</div>
+        </div>
+      </div>
+
+      <div class="atab-panel" id="atab-gui">
+        <div class="section-hd">
+          <h3>Guías de despacho emitidas</h3>
+          <button class="btn btn-outline" onclick="cargarGuias(true)">↻ Actualizar</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="adm-gui-search" placeholder="Buscar por N°, cliente o quien emitió…" oninput="renderGuiasTable()">
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>N° guía</th><th>Fecha</th><th>Cliente</th>
+              <th>Emitida por</th><th>Productos</th><th>PDF</th>
+            </tr></thead>
+            <tbody id="gui-tbl"></tbody>
+          </table>
+          <div class="empty" id="gui-empty" style="display:none">Aún no se ha emitido ninguna guía.</div>
         </div>
       </div>
     </div>
@@ -713,11 +734,12 @@ function showPage(p){
 }
 
 function switchAdminTab(t){
-  const order={inv:0,ins:1,usr:2,emp:3};
+  const order={inv:0,ins:1,usr:2,emp:3,gui:4};
   document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('active',i===order[t]));
-  ['inv','ins','usr','emp'].forEach(k=>
+  ['inv','ins','usr','emp','gui'].forEach(k=>
     document.getElementById('atab-'+k).classList.toggle('active', t===k));
   if(t==='emp'){ renderLogoPrev(); renderClientesTable(); }
+  if(t==='gui'){ cargarGuias(); }
 }
 
 /* ═══ STATS ═══ */
@@ -1246,6 +1268,61 @@ async function quitarLogo(){
   }finally{ hideSync(); }
 }
 
+/* ═══ HISTORIAL DE GUÍAS ═══ */
+let GUIAS = [];
+let guiasCargadas = false;
+
+async function cargarGuias(forzar=false){
+  if(guiasCargadas && !forzar) return;
+  const tbody=document.getElementById('gui-tbl');
+  if(tbody && !GUIAS.length) tbody.innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center;color:#bbb">Cargando…</td></tr>';
+  try{
+    const r=await fetch(`${FB_URL}/guias.json`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    GUIAS = toArr(await r.json());
+    guiasCargadas = true;
+  }catch(e){
+    if(tbody) tbody.innerHTML=`<tr><td colspan="6" style="padding:20px;text-align:center;color:#c0392b">No se pudo cargar: ${e.message}</td></tr>`;
+    return;
+  }
+  renderGuiasTable();
+}
+
+function renderGuiasTable(){
+  const tbody=document.getElementById('gui-tbl');
+  const empty=document.getElementById('gui-empty');
+  if(!tbody) return;
+  const q=(document.getElementById('adm-gui-search')?.value||'').toLowerCase();
+  const data=GUIAS
+    .filter(g=>!q||[g.numero,g.cliente,g.emitidoPor].join(' ').toLowerCase().includes(q))
+    .sort((a,b)=>String(b.numero).localeCompare(String(a.numero)));
+  if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(g=>{
+    const items=toArr(g.items);
+    const totalU=items.reduce((a,i)=>a+Number(i.cantidad||0),0);
+    const detalle=items.map(i=>`${i.codigo} ×${i.cantidad}`).join(', ');
+    return `<tr>
+      <td><code style="font-size:12px;font-weight:600">${g.numero}</code></td>
+      <td style="color:#666;font-size:13px">${fmtFecha(g.fecha)}</td>
+      <td><strong>${g.cliente}</strong></td>
+      <td style="color:#666;font-size:13px">${g.emitidoPor||'—'}</td>
+      <td style="font-size:12px;color:#666" title="${detalle}">
+        ${items.length} ítem${items.length===1?'':'s'} · ${totalU} u.
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="descargarGuia('${g.numero}')">📄 Descargar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function descargarGuia(numero){
+  const g=GUIAS.find(x=>String(x.numero)===String(numero));
+  if(!g){ alert('No se encontró la guía '+numero); return; }
+  crearPDF({...g, items: toArr(g.items)});
+}
+
 /* ═══ CLIENTES ═══ */
 let editClienteId=null;
 let clienteDesdeGuia=false;
@@ -1352,6 +1429,8 @@ async function generarGuia(){
     const sig=(Number(CONFIG.nextGuia)||1)+1;
     await fetch(`${FB_URL}/config/nextGuia.json`,{method:'PUT',body:JSON.stringify(sig)});
     CONFIG.nextGuia=sig;
+    GUIAS.push(registro);
+    renderGuiasTable();
     // 3) PDF
     crearPDF(registro);
     closeMo('mo-guia');
