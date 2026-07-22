@@ -252,7 +252,10 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="atab-panel active" id="atab-inv">
         <div class="section-hd">
           <h3>Gestión de inventario</h3>
-          <button class="btn btn-primary" onclick="openPieceModal()">+ Agregar pieza</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-outline" onclick="openGuiaModal()">📄 Guía de despacho</button>
+            <button class="btn btn-primary" onclick="openPieceModal()">+ Agregar pieza</button>
+          </div>
         </div>
         <div class="toolbar">
           <input type="text" id="adm-search" placeholder="Buscar…" oninput="renderAdminTable()">
@@ -371,6 +374,45 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL GUÍA DE DESPACHO ════ -->
+<div class="overlay" id="mo-guia">
+  <div class="modal" style="max-width:700px">
+    <h2>Guía de despacho</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>N° de guía (automático)</label><input id="gd-num" readonly style="background:#f4f4f4;font-weight:600"></div>
+      <div class="form-group"><label>Fecha de emisión</label><input id="gd-fecha" type="date"></div>
+      <div class="form-group full"><label>Cliente a despachar *</label><input id="gd-cliente" placeholder="Nombre del cliente o empresa"></div>
+      <div class="form-group full"><label>Emitida por</label><input id="gd-emisor" readonly style="background:#f4f4f4"></div>
+    </div>
+
+    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Productos a despachar</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="gd-pieza" style="flex:2;min-width:230px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none"></select>
+        <input id="gd-cant" type="number" min="1" placeholder="Cant." style="width:95px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();addGuiaItem();}">
+        <button class="btn btn-in" onclick="addGuiaItem()">＋ Agregar</button>
+      </div>
+      <div id="gd-lista" style="margin-top:12px"></div>
+    </div>
+
+    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Logo de la empresa</label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="gd-logo" accept="image/png,image/jpeg" onchange="subirLogo(event)" style="font-size:13px;max-width:230px">
+        <img id="gd-logo-prev" alt="Logo" style="max-height:46px;max-width:120px;display:none;border:1px solid #eee;border-radius:4px;padding:2px">
+        <button class="btn btn-outline btn-sm" id="gd-logo-del" onclick="quitarLogo()" style="display:none">Quitar</button>
+      </div>
+      <small style="color:#999;font-size:12px;display:block;margin-top:6px">Se guarda una sola vez y aparece en todas las guías. PNG o JPG, máx. 900 KB.</small>
+    </div>
+
+    <div class="modal-err" id="gd-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-guia')">Cancelar</button>
+      <button class="btn btn-primary" id="gd-save" onclick="generarGuia()">Generar guía y descontar stock</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL MOVIMIENTO (ingreso / egreso) ════ -->
 <div class="overlay" id="mo-mov">
   <div class="modal" style="max-width:360px">
@@ -459,6 +501,9 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
 <div id="sync">Guardando…</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <script>
 /* ═══════════════════════════════════════════════════════════════════
    CONFIGURACIÓN — pega aquí la URL del Web App de Google Apps Script
@@ -473,6 +518,7 @@ let INV   = [];
 let INS   = [];
 let insumosReady = false;
 let backendVersion = '?';
+let CONFIG = {};
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
@@ -488,14 +534,19 @@ function fbSetList(type, arr){
   if(type==='user') USERS = arr; else if(type==='insumo') INS = arr; else INV = arr;
 }
 
-/* Lee TODA la base en una sola petición (~200ms) */
+/* Lee las colecciones en paralelo (~200ms). No descarga el historial de guías. */
 async function apiGet(){
-  const r = await fetch(FB_URL + '/.json');
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  const j = (await r.json()) || {};
-  USERS = toArr(j.users);
-  INV   = toArr(j.inventory);
-  INS   = toArr(j.insumos);
+  const paths = ['users','inventory','insumos','config'];
+  const res = await Promise.all(paths.map(p =>
+    fetch(`${FB_URL}/${p}.json`).then(r=>{
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+  ));
+  USERS  = toArr(res[0]);
+  INV    = toArr(res[1]);
+  INS    = toArr(res[2]);
+  CONFIG = res[3] || {};
   insumosReady = true;
   backendVersion = 'firebase';
 }
@@ -991,6 +1042,205 @@ function exportInsCSV(){
   a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
   a.download='surframe-insumos.csv';
   a.click();
+}
+
+/* ═══════════════ GUÍA DE DESPACHO ═══════════════ */
+let guiaItems=[];
+
+function esAdmin(){ return !!(currentUser && currentUser.role==='admin'); }
+
+function numGuia(){
+  const n = Number(CONFIG.nextGuia) || 1;
+  return 'GD-' + String(n).padStart(5,'0');
+}
+
+function fmtFecha(iso){
+  if(!iso) return '';
+  const p = String(iso).split('-');
+  return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+}
+
+function openGuiaModal(){
+  if(!esAdmin()){ alert('Solo los administradores pueden generar guías de despacho.'); return; }
+  guiaItems=[];
+  document.getElementById('gd-err').textContent='';
+  document.getElementById('gd-cliente').value='';
+  document.getElementById('gd-cant').value='';
+  document.getElementById('gd-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('gd-emisor').value=currentUser.name;
+  document.getElementById('gd-num').value=numGuia();
+  const sel=document.getElementById('gd-pieza');
+  sel.innerHTML = getInv().slice()
+    .sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)))
+    .map(p=>`<option value="${p.id}">${p.codigo} — ${p.nombre} (stock: ${p.qty} ${p.unit||''})</option>`).join('');
+  renderGuiaLista();
+  renderLogoPrev();
+  document.getElementById('mo-guia').classList.add('open');
+}
+
+function addGuiaItem(){
+  const err=document.getElementById('gd-err'); err.textContent='';
+  const id=Number(document.getElementById('gd-pieza').value);
+  const cant=parseInt(document.getElementById('gd-cant').value)||0;
+  const p=getInv().find(x=>Number(x.id)===id);
+  if(!p){ err.textContent='Selecciona un producto.'; return; }
+  if(cant<=0){ err.textContent='Ingresa una cantidad válida.'; return; }
+  const yaEn=guiaItems.filter(i=>i.id===id).reduce((a,i)=>a+i.cantidad,0);
+  if(yaEn+cant > Number(p.qty)){
+    err.textContent=`Stock insuficiente de ${p.codigo}: disponible ${p.qty}${yaEn?`, ya agregaste ${yaEn}`:''}.`;
+    return;
+  }
+  const ex=guiaItems.find(i=>i.id===id);
+  if(ex) ex.cantidad+=cant;
+  else guiaItems.push({id, codigo:p.codigo, nombre:p.nombre, unit:p.unit||'', cantidad:cant});
+  document.getElementById('gd-cant').value='';
+  renderGuiaLista();
+}
+
+function removeGuiaItem(id){ guiaItems=guiaItems.filter(i=>i.id!==id); renderGuiaLista(); }
+
+function renderGuiaLista(){
+  const c=document.getElementById('gd-lista');
+  if(!guiaItems.length){
+    c.innerHTML='<div style="color:#bbb;font-size:13px;padding:10px 0">Aún no has agregado productos.</div>';
+    return;
+  }
+  c.innerHTML=`<table style="width:100%;font-size:13px;border-collapse:collapse">
+    <thead><tr style="background:#f4f4f4">
+      <th style="text-align:left;padding:6px 8px">Código</th>
+      <th style="text-align:left;padding:6px 8px">Producto</th>
+      <th style="padding:6px 8px">Cantidad</th><th></th>
+    </tr></thead>
+    <tbody>${guiaItems.map(i=>`<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:6px 8px"><code style="font-size:12px">${i.codigo}</code></td>
+      <td style="padding:6px 8px">${i.nombre}</td>
+      <td style="padding:6px 8px;text-align:center"><strong>${i.cantidad}</strong> <span style="color:#aaa;font-size:11px">${i.unit}</span></td>
+      <td style="padding:6px 8px;text-align:right"><button class="btn btn-danger btn-sm" onclick="removeGuiaItem(${i.id})">✕</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+/* ── Logo ── */
+function renderLogoPrev(){
+  const img=document.getElementById('gd-logo-prev'), del=document.getElementById('gd-logo-del');
+  if(CONFIG.logo){ img.src=CONFIG.logo; img.style.display=''; del.style.display=''; }
+  else { img.style.display='none'; del.style.display='none'; }
+}
+
+async function subirLogo(ev){
+  const f=ev.target.files && ev.target.files[0]; if(!f) return;
+  const err=document.getElementById('gd-err'); err.textContent='';
+  if(f.size > 900*1024){ err.textContent='La imagen pesa más de 900 KB. Usa una más liviana.'; ev.target.value=''; return; }
+  const dataUrl=await new Promise((res,rej)=>{
+    const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f);
+  });
+  showSync('Guardando logo…');
+  try{
+    const r=await fetch(`${FB_URL}/config/logo.json`,{method:'PUT',body:JSON.stringify(dataUrl)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    CONFIG.logo=dataUrl; renderLogoPrev();
+  }catch(e){ err.textContent='No se pudo guardar el logo: '+e.message; }
+  finally{ hideSync(); }
+}
+
+async function quitarLogo(){
+  showSync('Quitando logo…');
+  try{
+    await fetch(`${FB_URL}/config/logo.json`,{method:'DELETE'});
+    CONFIG.logo=null;
+    document.getElementById('gd-logo').value='';
+    renderLogoPrev();
+  }finally{ hideSync(); }
+}
+
+/* ── Generar ── */
+async function generarGuia(){
+  const err=document.getElementById('gd-err'); err.textContent='';
+  if(!esAdmin()){ err.textContent='Solo los administradores pueden generar guías.'; return; }
+  const cliente=document.getElementById('gd-cliente').value.trim();
+  const fecha=document.getElementById('gd-fecha').value;
+  if(!cliente){ err.textContent='Indica el cliente a despachar.'; return; }
+  if(!guiaItems.length){ err.textContent='Agrega al menos un producto.'; return; }
+  for(const it of guiaItems){
+    const p=getInv().find(x=>Number(x.id)===it.id);
+    if(!p || Number(p.qty) < it.cantidad){
+      err.textContent=`Stock insuficiente de ${it.codigo}. Actualiza y reintenta.`; return;
+    }
+  }
+  const btn=document.getElementById('gd-save'); btn.disabled=true;
+  const numero=numGuia();
+  try{
+    // 1) Descontar stock de cada producto
+    for(const it of guiaItems){
+      const p=getInv().find(x=>Number(x.id)===it.id);
+      await apiPost({type:'piece', action:'save', item:{...p, qty:Number(p.qty)-it.cantidad}});
+    }
+    // 2) Guardar el registro de la guía e incrementar el correlativo
+    const registro={numero, fecha, cliente, emitidoPor:currentUser.name,
+                    items:guiaItems.map(i=>({codigo:i.codigo,nombre:i.nombre,cantidad:i.cantidad,unit:i.unit})),
+                    creado:new Date().toISOString()};
+    await fetch(`${FB_URL}/guias/${numero}.json`,{method:'PUT',body:JSON.stringify(registro)});
+    const sig=(Number(CONFIG.nextGuia)||1)+1;
+    await fetch(`${FB_URL}/config/nextGuia.json`,{method:'PUT',body:JSON.stringify(sig)});
+    CONFIG.nextGuia=sig;
+    // 3) PDF
+    crearPDF(registro);
+    closeMo('mo-guia');
+    renderTable(); renderStats(); renderAdminTable();
+  }catch(e){
+    err.textContent='Error al generar la guía: '+e.message;
+  }
+  btn.disabled=false;
+}
+
+function crearPDF(g){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const top = 15;
+
+  if(CONFIG.logo){
+    try{ doc.addImage(CONFIG.logo, 15, top, 34, 34, undefined, 'FAST'); }catch(e){ console.warn('logo', e); }
+  }
+  doc.setFontSize(18); doc.setFont(undefined,'bold');
+  doc.text('GUÍA DE DESPACHO', 195, top+9, {align:'right'});
+  doc.setFontSize(12);
+  doc.text('N° '+g.numero, 195, top+17, {align:'right'});
+
+  let y = top + 38;
+  doc.setDrawColor(190); doc.line(15, y, 195, y); y += 9;
+
+  doc.setFontSize(10); doc.setFont(undefined,'normal');
+  const fila=(et,val)=>{
+    doc.setTextColor(110); doc.text(et, 15, y);
+    doc.setTextColor(20); doc.setFont(undefined,'bold'); doc.text(String(val), 58, y);
+    doc.setFont(undefined,'normal'); y += 6.5;
+  };
+  fila('Fecha de emisión:', fmtFecha(g.fecha));
+  fila('Cliente:',          g.cliente);
+  fila('Emitida por:',      g.emitidoPor);
+
+  doc.autoTable({
+    startY: y + 4,
+    head: [['Código','Descripción','Cantidad','Unidad']],
+    body: g.items.map(i=>[i.codigo, i.nombre, String(i.cantidad), i.unit||'']),
+    styles:{ fontSize:9, cellPadding:2.6, lineColor:[225,225,225], lineWidth:0.1 },
+    headStyles:{ fillColor:[17,17,17], textColor:255, fontStyle:'bold' },
+    columnStyles:{ 2:{halign:'center',cellWidth:22}, 3:{halign:'center',cellWidth:24} },
+    margin:{left:15,right:15}
+  });
+
+  let fy = doc.lastAutoTable.finalY + 28;
+  if(fy > 250){ doc.addPage(); fy = 45; }
+  doc.setDrawColor(130);
+  doc.line(22, fy, 88, fy); doc.line(122, fy, 188, fy);
+  doc.setFontSize(9); doc.setTextColor(90);
+  doc.text('Entregado por', 55, fy+5, {align:'center'});
+  doc.text('Recibido por', 155, fy+5, {align:'center'});
+
+  doc.setFontSize(8); doc.setTextColor(140);
+  doc.text('Surframe — Solutions for the food industry', 105, 287, {align:'center'});
+
+  const safe = g.cliente.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,30) || 'cliente';
+  doc.save(`${g.numero} - ${safe}.pdf`);
 }
 
 /* ═══════════════ MOVIMIENTOS DE STOCK ═══════════════ */
