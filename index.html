@@ -258,6 +258,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <h3>Gestión de inventario</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-outline" onclick="openGuiaModal()">📄 Guía de despacho</button>
+            <button class="btn btn-outline" onclick="openEtiquetaModal()">🏷 Etiquetas de envío</button>
             <button class="btn btn-primary" onclick="openPieceModal()">+ Agregar pieza</button>
           </div>
         </div>
@@ -486,6 +487,63 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-guia')">Cancelar</button>
       <button class="btn btn-primary" id="gd-save" onclick="generarGuia()">Generar guía y descontar stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL ETIQUETAS DE ENVÍO ════ -->
+<div class="overlay" id="mo-etiqueta">
+  <div class="modal" style="max-width:640px">
+    <h2>Etiquetas de envío</h2>
+    <div class="form-grid">
+      <div class="form-group full"><label>Cliente (autocompletar)</label>
+        <div style="display:flex;gap:8px">
+          <select id="et-cliente" onchange="etAutollenar()" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
+          <button class="btn btn-outline" onclick="openClienteModal(null,false)" title="Agregar cliente">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="form-group full"><label>Envío a (destinatario) *</label><input id="et-envio" placeholder="Nombre / empresa"></div>
+      <div class="form-group full"><label>Dirección</label><input id="et-dir" placeholder="Calle, número"></div>
+      <div class="form-group"><label>Población / Ciudad</label><input id="et-pob"></div>
+      <div class="form-group"><label>Código postal</label><input id="et-cp"></div>
+      <div class="form-group"><label>Provincia / Región</label><input id="et-prov"></div>
+      <div class="form-group"><label>N° de bultos</label><input id="et-bultos" type="number" min="1" value="1"></div>
+      <div class="form-group"><label>Peso (kg)</label><input id="et-peso" placeholder="Ej: 12.5"></div>
+      <div class="form-group"><label>Fecha</label><input id="et-fecha" type="date"></div>
+      <div class="form-group full"><label>Referencia</label><input id="et-ref" placeholder="Ej: N° de pedido o guía"></div>
+      <div class="form-group full"><label>Remite (datos de tu empresa)</label>
+        <textarea id="et-remite" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Nombre y dirección de tu empresa"></textarea>
+      </div>
+    </div>
+
+    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:10px">Formato de impresión</label>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="form-group"><label>Tamaño de hoja</label>
+          <select id="et-size">
+            <option value="a4">A4 (210×297 mm)</option>
+            <option value="letter">Carta (216×279 mm)</option>
+            <option value="a5">A5 (148×210 mm)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Etiquetas por hoja</label>
+          <select id="et-perpage">
+            <option value="1">1 (hoja completa)</option>
+            <option value="2">2 por hoja</option>
+            <option value="4" selected>4 por hoja</option>
+            <option value="6">6 por hoja</option>
+            <option value="8">8 por hoja</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Cantidad de etiquetas</label><input id="et-cant" type="number" min="1" value="1"></div>
+      </div>
+      <small style="color:#999;font-size:12px;display:block;margin-top:4px">La misma etiqueta se repite la cantidad indicada y se acomoda en las hojas según el formato elegido.</small>
+    </div>
+
+    <div class="modal-err" id="et-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-etiqueta')">Cancelar</button>
+      <button class="btn btn-primary" id="et-save" onclick="generarEtiquetas()">🏷 Generar etiquetas (PDF)</button>
     </div>
   </div>
 </div>
@@ -1504,6 +1562,163 @@ function crearPDF(g){
 
   const safe = g.cliente.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,30) || 'cliente';
   doc.save(`${g.numero} - ${safe}.pdf`);
+}
+
+/* ═══════════════ ETIQUETAS DE ENVÍO ═══════════════ */
+function openEtiquetaModal(){
+  if(!esAdmin()){ alert('Solo los administradores pueden generar etiquetas.'); return; }
+  document.getElementById('et-err').textContent='';
+  // clientes para autocompletar
+  const sel=document.getElementById('et-cliente');
+  const lista=CLIENTES.slice().sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
+  sel.innerHTML='<option value="">— Sin cliente (manual) —</option>'+
+    lista.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  sel.value='';
+  ['et-envio','et-dir','et-pob','et-cp','et-prov','et-peso','et-ref'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('et-bultos').value='1';
+  document.getElementById('et-cant').value='1';
+  document.getElementById('et-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('et-remite').value = CONFIG.remite || 'Surframe\nSolutions for the food industry';
+  document.getElementById('mo-etiqueta').classList.add('open');
+}
+
+function etAutollenar(){
+  const c=CLIENTES.find(x=>String(x.id)===document.getElementById('et-cliente').value);
+  if(!c) return;
+  document.getElementById('et-envio').value=c.nombre||'';
+  document.getElementById('et-dir').value=c.direccion||'';
+}
+
+const _PTMM=0.352778;
+function _clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function _fit(doc,str,maxW){
+  str=String(str==null?'':str);
+  if(doc.getTextWidth(str)<=maxW) return str;
+  while(str.length>1 && doc.getTextWidth(str+'…')>maxW) str=str.slice(0,-1);
+  return str+'…';
+}
+
+function drawEtiqueta(doc, x, y, w, h, d){
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.4); doc.rect(x,y,w,h);
+  const pad=Math.max(2.5, w*0.045);
+  const ix=x+pad, iw=w-2*pad;
+  const y1=y+h*0.47, y2=y+h*0.71;
+  doc.setLineWidth(0.9); doc.line(x,y1,x+w,y1); doc.line(x,y2,x+w,y2);
+  doc.setLineWidth(0.4);
+
+  const fBig=_clamp(h*0.070, 8, 15);
+  const fLab=_clamp(h*0.045, 6.5, 10);
+  const lhB=fBig*_PTMM*1.2;
+  const lh =fLab*_PTMM*1.55;
+
+  // ── Sección 1: destinatario ──
+  let cy=y+pad+fBig*_PTMM;
+  doc.setFont('helvetica','bold'); doc.setFontSize(fBig);
+  doc.text('ENVÍO A: ', ix, cy);
+  const ewx=ix+doc.getTextWidth('ENVÍO A: ');
+  doc.setFont('helvetica','normal'); doc.text(_fit(doc,d.envio,x+w-pad-ewx), ewx, cy);
+  cy+=lhB;
+  const campo=(lab,val)=>{
+    doc.setFont('helvetica','bold'); doc.setFontSize(fLab);
+    doc.text(lab, ix, cy);
+    const lw=doc.getTextWidth(lab+' ');
+    doc.setFont('helvetica','normal');
+    doc.text(_fit(doc,val,iw-lw-1), ix+lw+1, cy);
+    cy+=lh;
+  };
+  campo('DIRECCIÓN:', d.dir);
+  campo('POBLACIÓN:', d.pob);
+  campo('CÓDIGO POSTAL:', d.cp);
+  campo('PROVINCIA:', d.prov);
+
+  // ── Sección 2: bultos / peso / fecha / ref ──
+  let by=y1+pad+fLab*_PTMM;
+  const colB=ix, colP=x+w*0.54;
+  const par=(cx,lab,val,maxW)=>{
+    doc.setFont('helvetica','bold'); doc.setFontSize(fLab);
+    doc.text(lab, cx, by);
+    const lw=doc.getTextWidth(lab+' ');
+    doc.setFont('helvetica','normal');
+    doc.text(_fit(doc,val,maxW-lw-1), cx+lw+1, by);
+  };
+  par(colB,'N° BULTOS:', d.bultos, (colP-colB)); par(colP,'PESO KG:', d.peso, (x+w-pad-colP)); by+=lh;
+  par(colB,'FECHA:', d.fecha, (colP-colB)); par(colP,'REF.:', d.ref, (x+w-pad-colP));
+
+  // ── Sección 3: remite + logo ──
+  let ry=y2+pad+fBig*_PTMM;
+  doc.setFont('helvetica','bold'); doc.setFontSize(fBig);
+  doc.text('REMITE:', ix, ry);
+  // logo a la derecha
+  if(d.logo){
+    try{
+      const pr=doc.getImageProperties(d.logo);
+      const secH=(y+h)-y2;
+      const boxH=Math.min(secH*0.62, h*0.16);
+      const boxW=Math.min(boxH*(pr.width/pr.height), iw*0.42);
+      const bh=boxW/(pr.width/pr.height);
+      doc.addImage(d.logo, pr.fileType||'PNG', x+w-pad-boxW, y2+(secH-bh)/2, boxW, bh);
+    }catch(e){ /* logo opcional */ }
+  }
+  doc.setFont('helvetica','normal'); doc.setFontSize(fLab);
+  let ty=ry+lh;
+  String(d.remite||'').split('\n').slice(0,3).forEach(l=>{
+    doc.text(_fit(doc,l,iw*0.6), ix, ty); ty+=lh*0.92;
+  });
+}
+
+async function generarEtiquetas(){
+  const err=document.getElementById('et-err'); err.textContent='';
+  if(!esAdmin()){ err.textContent='Solo los administradores pueden generar etiquetas.'; return; }
+  const envio=document.getElementById('et-envio').value.trim();
+  if(!envio){ err.textContent='Indica el destinatario (Envío a).'; return; }
+  const cant=parseInt(document.getElementById('et-cant').value)||1;
+  if(cant<1 || cant>500){ err.textContent='La cantidad debe estar entre 1 y 500.'; return; }
+  const perPage=parseInt(document.getElementById('et-perpage').value)||4;
+  const size=document.getElementById('et-size').value;
+  const remite=document.getElementById('et-remite').value.trim();
+
+  const d={
+    envio,
+    dir:document.getElementById('et-dir').value.trim(),
+    pob:document.getElementById('et-pob').value.trim(),
+    cp:document.getElementById('et-cp').value.trim(),
+    prov:document.getElementById('et-prov').value.trim(),
+    bultos:document.getElementById('et-bultos').value.trim(),
+    peso:document.getElementById('et-peso').value.trim(),
+    fecha:fmtFecha(document.getElementById('et-fecha').value),
+    ref:document.getElementById('et-ref').value.trim(),
+    remite, logo:CONFIG.logo||null
+  };
+
+  const btn=document.getElementById('et-save'); btn.disabled=true;
+  try{
+    // recordar remite para la próxima vez
+    if(remite && remite!==CONFIG.remite){
+      CONFIG.remite=remite;
+      fetch(`${FB_URL}/config/remite.json`,{method:'PUT',body:JSON.stringify(remite)}).catch(()=>{});
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'mm', format:size, orientation:'portrait'});
+    const pw=doc.internal.pageSize.getWidth(), ph=doc.internal.pageSize.getHeight();
+    const grid={1:[1,1],2:[1,2],4:[2,2],6:[2,3],8:[2,4]}[perPage]||[2,2];
+    const cols=grid[0], rows=grid[1], porHoja=cols*rows;
+    const margin=8, gap=4;
+    const lw=(pw-2*margin-gap*(cols-1))/cols;
+    const lh=(ph-2*margin-gap*(rows-1))/rows;
+
+    for(let i=0;i<cant;i++){
+      const enHoja=i%porHoja;
+      if(i>0 && enHoja===0) doc.addPage();
+      const c=enHoja%cols, r=Math.floor(enHoja/cols);
+      const x=margin+c*(lw+gap), y=margin+r*(lh+gap);
+      drawEtiqueta(doc, x, y, lw, lh, d);
+    }
+    const safe=(envio.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,25))||'envio';
+    doc.save(`Etiquetas - ${safe}.pdf`);
+    closeMo('mo-etiqueta');
+  }catch(e){ err.textContent='Error al generar: '+e.message; }
+  btn.disabled=false;
 }
 
 /* ═══════════════ MOVIMIENTOS DE STOCK ═══════════════ */
