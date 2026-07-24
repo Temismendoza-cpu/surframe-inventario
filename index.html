@@ -605,8 +605,16 @@ tbody td{padding:10px 14px;vertical-align:middle}
       </div>
       <div class="form-group full"><label>Equipo / Máquina *</label><input id="mt-equipo" placeholder="Ej: Calibradores de barra"></div>
       <div class="form-group full"><label>Responsable (quién realiza el trabajo)</label><input id="mt-resp" placeholder="Ej: Juan Pérez / Cuadrilla A"></div>
-      <div class="form-group"><label>Fecha de desmontaje</label><input id="mt-desm" type="date"></div>
-      <div class="form-group"><label>Fecha de montaje</label><input id="mt-mont" type="date"></div>
+      <div class="form-group full" style="margin-bottom:-4px">
+        <label style="color:#9c6a10">🟠 Desmontaje</label>
+      </div>
+      <div class="form-group"><label>Desde</label><input id="mt-desm" type="date"></div>
+      <div class="form-group"><label>Hasta</label><input id="mt-desmH" type="date"></div>
+      <div class="form-group full" style="margin-bottom:-4px">
+        <label style="color:#1a7a45">🟢 Montaje</label>
+      </div>
+      <div class="form-group"><label>Desde</label><input id="mt-mont" type="date"></div>
+      <div class="form-group"><label>Hasta</label><input id="mt-montH" type="date"></div>
       <div class="form-group full"><label>Notas</label>
         <textarea id="mt-notas" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Observaciones…"></textarea>
       </div>
@@ -1765,6 +1773,22 @@ async function setEstado(id, val){
   }
 }
 
+/* Texto de un rango de fechas: una sola fecha o "desde → hasta" */
+function rangoTexto(desde, hasta){
+  if(!desde && !hasta) return '—';
+  if(!hasta || hasta===desde) return fmtFecha(desde||hasta);
+  return `${fmtFecha(desde)}<br><span style="color:#999">→ ${fmtFecha(hasta)}</span>`;
+}
+/* Lista de días ISO cubiertos por el rango (inclusive) */
+function diasEntre(desde, hasta){
+  const out=[];
+  if(!desde) return out;
+  const fin=(hasta && hasta>desde) ? hasta : desde;
+  let d=new Date(desde+'T12:00:00'), f=new Date(fin+'T12:00:00'), g=0;
+  while(d<=f && g++<400){ out.push(_iso(d)); d.setDate(d.getDate()+1); }
+  return out;
+}
+
 function croSorted(){
   return CRONO.slice().sort((a,b)=>{
     const da=a.desmontaje||'9999', db=b.desmontaje||'9999';
@@ -1821,8 +1845,8 @@ function renderCronograma(){
     <td style="text-align:center">${t.cantidad||''}</td>
     <td>${t.equipo||'—'}</td>
     <td style="color:#555;font-size:13px">${t.responsable||'—'}</td>
-    <td style="font-size:13px">${t.desmontaje?fmtFecha(t.desmontaje):'—'}</td>
-    <td style="font-size:13px">${t.montaje?fmtFecha(t.montaje):'—'}</td>
+    <td style="font-size:13px;line-height:1.4">${rangoTexto(t.desmontaje,t.desmontajeHasta)}</td>
+    <td style="font-size:13px;line-height:1.4">${rangoTexto(t.montaje,t.montajeHasta)}</td>
     <td>${admin ? estadoBtn(t) : estadoBadge(t.estado)}</td>
     ${admin?`<td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openTrabajoModal(${t.id})">✏</button>
@@ -1870,8 +1894,10 @@ function calEventos(){
   const ev={};
   croFiltered().forEach(t=>{
     const hecho=(t.estado==='Completado'||t.estado==='Terminado');
-    if(t.desmontaje) (ev[t.desmontaje]=ev[t.desmontaje]||[]).push({t,tipo:'desm',hecho});
-    if(t.montaje)    (ev[t.montaje]   =ev[t.montaje]   ||[]).push({t,tipo:'mont',hecho});
+    diasEntre(t.desmontaje,t.desmontajeHasta).forEach(iso=>
+      (ev[iso]=ev[iso]||[]).push({t,tipo:'desm',hecho}));
+    diasEntre(t.montaje,t.montajeHasta).forEach(iso=>
+      (ev[iso]=ev[iso]||[]).push({t,tipo:'mont',hecho}));
   });
   return ev;
 }
@@ -1932,6 +1958,9 @@ function abrirDiaCal(iso, lista){
       <div style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.4px">${et}</div>
       <div style="font-weight:600;margin-top:2px">${e.t.equipo}</div>
       <div style="font-size:13px;color:#666">${e.t.cliente}${e.t.cantidad?' · '+e.t.cantidad+' u.':''}</div>
+      <div style="font-size:12px;color:#888;margin-top:3px">${
+        e.tipo==='desm' ? rangoTexto(e.t.desmontaje,e.t.desmontajeHasta).replace(/<br>/g,' ')
+                        : rangoTexto(e.t.montaje,e.t.montajeHasta).replace(/<br>/g,' ')}</div>
       ${e.t.responsable?`<div style="font-size:12px;color:#888;margin-top:2px">👤 ${e.t.responsable}</div>`:''}
       <div style="margin-top:6px">${estadoBadge(e.t.estado)}</div>
       ${esAdmin()?`<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="closeMo('mo-caldia');openTrabajoModal(${e.t.id})">✏ Editar</button>`:''}
@@ -1955,7 +1984,9 @@ function openTrabajoModal(id=null){
   document.getElementById('mt-equipo').value   = t ? (t.equipo||'')    : '';
   document.getElementById('mt-resp').value     = t ? (t.responsable||''): '';
   document.getElementById('mt-desm').value     = t ? (t.desmontaje||''): '';
+  document.getElementById('mt-desmH').value    = t ? (t.desmontajeHasta||''): '';
   document.getElementById('mt-mont').value     = t ? (t.montaje||'')   : '';
+  document.getElementById('mt-montH').value    = t ? (t.montajeHasta||''): '';
   document.getElementById('mt-notas').value    = t ? (t.notas||'')     : '';
   document.getElementById('mo-trabajo').classList.add('open');
 }
@@ -1965,14 +1996,20 @@ async function saveTrabajo(){
   const cliente=document.getElementById('mt-cliente').value.trim();
   const equipo=document.getElementById('mt-equipo').value.trim();
   if(!cliente||!equipo){ err.textContent='Cliente y equipo son obligatorios.'; return; }
+  const dD=document.getElementById('mt-desm').value, dH=document.getElementById('mt-desmH').value;
+  const mD=document.getElementById('mt-mont').value, mH=document.getElementById('mt-montH').value;
+  if(dD&&dH&&dH<dD){ err.textContent='En desmontaje, la fecha "hasta" no puede ser anterior a "desde".'; return; }
+  if(mD&&mH&&mH<mD){ err.textContent='En montaje, la fecha "hasta" no puede ser anterior a "desde".'; return; }
+  if(dH&&!dD){ err.textContent='Indica la fecha "desde" del desmontaje.'; return; }
+  if(mH&&!mD){ err.textContent='Indica la fecha "desde" del montaje.'; return; }
   const item={
     cliente,
     proyecto:document.getElementById('mt-proyecto').value.trim(),
     cantidad:document.getElementById('mt-cant').value.trim(),
     equipo,
     responsable:document.getElementById('mt-resp').value.trim(),
-    desmontaje:document.getElementById('mt-desm').value,
-    montaje:document.getElementById('mt-mont').value,
+    desmontaje:dD, desmontajeHasta:dH,
+    montaje:mD,   montajeHasta:mH,
     estado:document.getElementById('mt-estado').value,
     notas:document.getElementById('mt-notas').value.trim()
   };
