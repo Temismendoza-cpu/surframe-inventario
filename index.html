@@ -97,6 +97,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .modal h2{font-size:17px;font-weight:700;margin-bottom:1.5rem;padding-bottom:12px;border-bottom:1px solid #eee}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-grid .full{grid-column:1/-1}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr}
 .form-group{display:flex;flex-direction:column;gap:5px}
 .form-group label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555}
 .form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid #ddd;border-radius:var(--r);font-size:14px;outline:none;font-family:inherit}
@@ -139,9 +140,72 @@ tbody td{padding:10px 14px;vertical-align:middle}
 #sync{position:fixed;bottom:16px;right:16px;background:#111;color:#fff;font-size:13px;padding:8px 16px;border-radius:20px;opacity:0;transition:.3s;z-index:400;pointer-events:none}
 #sync.show{opacity:1}
 
-@media(max-width:600px){
-  header{padding:0 1rem}.huser .huser-name{display:none}
-  main{padding:1rem}.form-grid{grid-template-columns:1fr}
+/* ══════════ MÓVIL / SMARTPHONE ══════════ */
+@media(max-width:760px){
+  /* Encabezado: logo compacto, menú en su propia fila deslizable */
+  header{height:auto;flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .hlogo{gap:8px;flex:0 1 auto;min-width:0}
+  .hlogo svg{width:30px;height:30px;flex:0 0 auto}
+  .hlogo-text strong{font-size:14px;letter-spacing:1.4px}
+  .hlogo-text span{font-size:7px;letter-spacing:.8px;white-space:nowrap}
+  nav{order:3;width:100%;overflow-x:auto;gap:6px;padding-bottom:2px;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:0 0 auto;padding:8px 15px;font-size:13px}
+  .huser{margin-left:auto;gap:8px;flex:0 0 auto}
+  .huser .huser-name{display:none}
+  .btn-logout{padding:6px 10px;font-size:12px}
+
+  main{padding:1rem .75rem}
+
+  /* Encabezados de sección y sus botones */
+  .section-hd{flex-wrap:wrap;gap:10px}
+  .section-hd h3{font-size:17px}
+
+  /* Tarjetas de resumen */
+  .cards{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.2rem}
+  .card{padding:.75rem .85rem}
+  .card label{font-size:10px}
+  .card .val{font-size:21px}
+
+  /* Barra de filtros: campos a lo ancho */
+  .toolbar{gap:8px}
+  .toolbar input{min-width:0;flex:1 1 100%}
+  .toolbar select{flex:1 1 46%;min-width:0}
+
+  /* Pestañas del panel admin: deslizables en horizontal */
+  .atabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .atabs::-webkit-scrollbar{display:none}
+  .atab{flex:0 0 auto;padding:9px 14px;font-size:13px}
+
+  /* Tablas: se deslizan en horizontal en vez de aplastar el texto */
+  .tbl-wrap{-webkit-overflow-scrolling:touch}
+  .tbl-wrap table{min-width:660px}
+  table{font-size:13px}
+  thead th{padding:9px 10px;font-size:10px}
+  tbody td{padding:8px 10px}
+
+  /* Ventanas emergentes */
+  .modal{padding:1.25rem 1.1rem;border-radius:12px;margin:.5rem;max-height:94vh}
+  .modal h2{font-size:16px;margin-bottom:1.1rem}
+  .form-grid,.form-grid-3{grid-template-columns:1fr}
+  .modal-actions{flex-wrap:wrap}
+  .modal-actions .btn{flex:1 1 auto}
+
+  /* 16px evita que iOS haga zoom automático al tocar un campo */
+  .form-group input,.form-group select,.form-group textarea,
+  .toolbar input,.toolbar select,.field input{font-size:16px}
+
+  /* Filas de la guía de despacho / etiquetas */
+  #gd-pieza,#et-cliente,#gd-cliente{min-width:0 !important}
+  #gd-pieza{flex:1 1 100% !important}
+  #gd-cant{width:100% !important}
+
+  .login-card{padding:1.9rem 1.3rem}
+}
+@media(max-width:420px){
+  .cards{grid-template-columns:1fr 1fr}
+  .hlogo-text span{display:none}
+  .hlogo-text strong{font-size:13px}
 }
 </style>
 </head>
@@ -654,7 +718,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
     <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
       <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:10px">Formato de impresión</label>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="form-grid form-grid-3">
         <div class="form-group"><label>Tamaño de hoja</label>
           <select id="et-size">
             <option value="a4">A4 (210×297 mm)</option>
