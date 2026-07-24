@@ -258,7 +258,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <option value="">Todos los estados</option>
           <option value="Pendiente">Pendiente</option>
           <option value="En proceso">En proceso</option>
-          <option value="Terminado">Terminado</option>
+          <option value="Completado">Completado</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
       </div>
@@ -535,7 +535,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="form-group"><label>Cantidad</label><input id="mt-cant" type="number" min="1" placeholder="1"></div>
       <div class="form-group"><label>Estado</label>
         <select id="mt-estado">
-          <option>Pendiente</option><option>En proceso</option><option>Terminado</option>
+          <option>Pendiente</option><option>En proceso</option><option>Completado</option>
         </select>
       </div>
       <div class="form-group full"><label>Equipo / Máquina *</label><input id="mt-equipo" placeholder="Ej: Calibradores de barra"></div>
@@ -1636,14 +1636,68 @@ function crearPDF(g){
 /* ═══════════════ CRONOGRAMA DE TRABAJOS ═══════════════ */
 let editTrabajoId=null;
 
-function estadoBadge(e){
+const ESTADOS=['Pendiente','En proceso','Completado'];
+function estadoStyle(e){
   const m={
+    'Completado':'background:#e8f8f0;color:#1a7a45',
     'Terminado':'background:#e8f8f0;color:#1a7a45',
     'En proceso':'background:#e6f1fb;color:#185fa5',
     'Pendiente':'background:#f1efe8;color:#5f5e5a'
   };
-  const st=m[e]||m['Pendiente'];
-  return `<span class="badge" style="${st}">${e||'Pendiente'}</span>`;
+  return m[e]||m['Pendiente'];
+}
+function estadoBadge(e){
+  return `<span class="badge" style="${estadoStyle(e)}">${e||'Pendiente'}</span>`;
+}
+function estadoBtn(t){
+  const e=t.estado||'Pendiente';
+  return `<button onclick="openEstadoMenu(event,${t.id})" class="badge"
+    style="${estadoStyle(e)};border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px">
+    ${e} <span style="font-size:9px">▼</span></button>`;
+}
+function estadoDot(e){
+  const c={'Completado':'#1a7a45','En proceso':'#185fa5','Pendiente':'#999'}[e]||'#999';
+  return `<span style="width:9px;height:9px;border-radius:50%;background:${c};display:inline-block"></span>`;
+}
+
+let _estadoMenuId=null;
+function closeEstadoMenu(){ const m=document.getElementById('estado-menu'); if(m) m.remove(); _estadoMenuId=null; }
+function openEstadoMenu(ev, id){
+  ev.stopPropagation();
+  if(_estadoMenuId===id){ closeEstadoMenu(); return; }
+  closeEstadoMenu();
+  const t=CRONO.find(x=>Number(x.id)===Number(id)); if(!t) return;
+  _estadoMenuId=id;
+  const cur=t.estado||'Pendiente';
+  const menu=document.createElement('div');
+  menu.id='estado-menu';
+  menu.style.cssText='position:fixed;z-index:500;background:#fff;border:1px solid #e0e0e0;border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.16);padding:5px;min-width:160px';
+  menu.innerHTML=ESTADOS.map(o=>`<div onclick="setEstado(${id},'${o}')"
+    style="padding:9px 12px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:9px"
+    onmouseover="this.style.background='#f4f4f4'" onmouseout="this.style.background='none'">
+    ${estadoDot(o)} <span style="flex:1">${o}</span> ${cur===o?'<span style="color:#1a7a45">✓</span>':''}</div>`).join('');
+  document.body.appendChild(menu);
+  const r=ev.currentTarget.getBoundingClientRect();
+  menu.style.top=(r.bottom+4)+'px';
+  menu.style.left=r.left+'px';
+  const mr=menu.getBoundingClientRect();
+  if(mr.right>window.innerWidth-8) menu.style.left=(window.innerWidth-mr.width-8)+'px';
+  if(mr.bottom>window.innerHeight-8) menu.style.top=(r.top-mr.height-4)+'px';
+  setTimeout(()=>document.addEventListener('click',closeEstadoMenu,{once:true}),0);
+}
+async function setEstado(id, val){
+  closeEstadoMenu();
+  const t=CRONO.find(x=>Number(x.id)===Number(id)); if(!t) return;
+  if((t.estado||'Pendiente')===val) return;
+  const prev=t.estado;
+  t.estado=val; renderCronoStats(); renderCronograma();   // optimista
+  try{
+    await apiPost({type:'trabajo', action:'save', item:{...t, estado:val}});
+    renderCronoStats(); renderCronograma();
+  }catch(e){
+    t.estado=prev; renderCronoStats(); renderCronograma();
+    alert('No se pudo cambiar el estado: '+e.message);
+  }
 }
 
 function croSorted(){
@@ -1658,12 +1712,12 @@ function renderCronoStats(){
   const d=CRONO;
   const pend=d.filter(x=>(x.estado||'Pendiente')==='Pendiente').length;
   const proc=d.filter(x=>x.estado==='En proceso').length;
-  const term=d.filter(x=>x.estado==='Terminado').length;
+  const term=d.filter(x=>x.estado==='Completado'||x.estado==='Terminado').length;
   document.getElementById('cro-stat-cards').innerHTML=`
     <div class="card"><label>Total trabajos</label><div class="val">${d.length}</div></div>
     <div class="card"><label>Pendientes</label><div class="val warn">${pend}</div></div>
     <div class="card"><label>En proceso</label><div class="val" style="color:#185fa5">${proc}</div></div>
-    <div class="card"><label>Terminados</label><div class="val ok">${term}</div></div>`;
+    <div class="card"><label>Completados</label><div class="val ok">${term}</div></div>`;
 }
 
 function populateCronoFilters(){
@@ -1698,7 +1752,7 @@ function renderCronograma(){
     <td style="color:#555;font-size:13px">${t.responsable||'—'}</td>
     <td style="font-size:13px">${t.desmontaje?fmtFecha(t.desmontaje):'—'}</td>
     <td style="font-size:13px">${t.montaje?fmtFecha(t.montaje):'—'}</td>
-    <td>${estadoBadge(t.estado)}</td>
+    <td>${admin ? estadoBtn(t) : estadoBadge(t.estado)}</td>
     ${admin?`<td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openTrabajoModal(${t.id})">✏</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteTrabajo(${t.id})">✕</button>
