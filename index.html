@@ -179,7 +179,9 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
   /* Tablas: se deslizan en horizontal en vez de aplastar el texto */
   .tbl-wrap{-webkit-overflow-scrolling:touch}
-  .tbl-wrap table{min-width:660px}
+  .tbl-wrap table{min-width:720px}
+  /* nombres y subtítulos en una sola línea: se desliza en vez de partirse */
+  tbody td strong,tbody td small,tbody td code{white-space:nowrap}
   table{font-size:13px}
   thead th{padding:9px 10px;font-size:10px}
   tbody td{padding:8px 10px}
