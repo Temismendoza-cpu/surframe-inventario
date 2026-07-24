@@ -177,6 +177,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <nav>
       <button id="nav-inv" class="active" onclick="showPage('inventario')">Inventario</button>
       <button id="nav-ins" onclick="showPage('insumos')">Insumos</button>
+      <button id="nav-cro" onclick="showPage('cronograma')">Cronograma</button>
       <button id="nav-adm" style="display:none" onclick="showPage('admin')">Admin</button>
     </nav>
     <div class="huser">
@@ -240,6 +241,36 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <tbody id="ins-tbl-body"></tbody>
         </table>
         <div class="empty" id="ins-tbl-empty" style="display:none">Sin resultados.</div>
+      </div>
+    </div>
+
+    <!-- ── CRONOGRAMA ── -->
+    <div class="page" id="page-cronograma">
+      <div class="section-hd">
+        <h3 style="font-size:20px;font-weight:700">Cronograma de trabajos</h3>
+        <button class="btn btn-primary" id="cro-add-btn" onclick="openTrabajoModal()" style="display:none">+ Agregar trabajo</button>
+      </div>
+      <div class="cards" id="cro-stat-cards"></div>
+      <div class="toolbar">
+        <input type="text" id="cro-search" placeholder="Buscar por cliente, equipo o responsable…" oninput="renderCronograma()">
+        <select id="cro-filter-cli" onchange="renderCronograma()"><option value="">Todos los clientes</option></select>
+        <select id="cro-filter-est" onchange="renderCronograma()">
+          <option value="">Todos los estados</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="En proceso">En proceso</option>
+          <option value="Terminado">Terminado</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Cliente</th><th>Cant.</th><th>Equipo / Máquina</th><th>Responsable</th>
+            <th>Desmontaje</th><th>Montaje</th><th>Estado</th><th id="cro-acc-th" style="display:none">Acciones</th>
+          </tr></thead>
+          <tbody id="cro-tbl"></tbody>
+        </table>
+        <div class="empty" id="cro-empty" style="display:none">No hay trabajos programados.</div>
       </div>
     </div>
 
@@ -491,6 +522,38 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL TRABAJO (CRONOGRAMA) ════ -->
+<div class="overlay" id="mo-trabajo">
+  <div class="modal" style="max-width:560px">
+    <h2 id="mt-title">Agregar trabajo</h2>
+    <div class="form-grid">
+      <div class="form-group full"><label>Cliente / Planta *</label>
+        <input id="mt-cliente" list="mt-clientes-list" placeholder="Ej: Ría Austral" autocomplete="off">
+        <datalist id="mt-clientes-list"></datalist>
+      </div>
+      <div class="form-group full"><label>Proyecto / Parada</label><input id="mt-proyecto" placeholder="Ej: Parada de planta"></div>
+      <div class="form-group"><label>Cantidad</label><input id="mt-cant" type="number" min="1" placeholder="1"></div>
+      <div class="form-group"><label>Estado</label>
+        <select id="mt-estado">
+          <option>Pendiente</option><option>En proceso</option><option>Terminado</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Equipo / Máquina *</label><input id="mt-equipo" placeholder="Ej: Calibradores de barra"></div>
+      <div class="form-group full"><label>Responsable (quién realiza el trabajo)</label><input id="mt-resp" placeholder="Ej: Juan Pérez / Cuadrilla A"></div>
+      <div class="form-group"><label>Fecha de desmontaje</label><input id="mt-desm" type="date"></div>
+      <div class="form-group"><label>Fecha de montaje</label><input id="mt-mont" type="date"></div>
+      <div class="form-group full"><label>Notas</label>
+        <textarea id="mt-notas" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Observaciones…"></textarea>
+      </div>
+    </div>
+    <div class="modal-err" id="mt-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-trabajo')">Cancelar</button>
+      <button class="btn btn-primary" id="mt-save" onclick="saveTrabajo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL ETIQUETAS DE ENVÍO ════ -->
 <div class="overlay" id="mo-etiqueta">
   <div class="modal" style="max-width:640px">
@@ -655,6 +718,7 @@ let insumosReady = false;
 let backendVersion = '?';
 let CONFIG = {};
 let CLIENTES = [];
+let CRONO = [];
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
@@ -662,22 +726,23 @@ function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):O
 /* Ruta en Firebase según el tipo de dato */
 function fbPath(type){
   return type==='user' ? 'users' : type==='insumo' ? 'insumos'
-       : type==='cliente' ? 'clientes' : 'inventory';
+       : type==='cliente' ? 'clientes' : type==='trabajo' ? 'cronograma' : 'inventory';
 }
 function fbList(type){
   return type==='user' ? USERS : type==='insumo' ? INS
-       : type==='cliente' ? CLIENTES : INV;
+       : type==='cliente' ? CLIENTES : type==='trabajo' ? CRONO : INV;
 }
 function fbSetList(type, arr){
   if(type==='user') USERS = arr;
   else if(type==='insumo') INS = arr;
   else if(type==='cliente') CLIENTES = arr;
+  else if(type==='trabajo') CRONO = arr;
   else INV = arr;
 }
 
 /* Lee las colecciones en paralelo (~200ms). No descarga el historial de guías. */
 async function apiGet(){
-  const paths = ['users','inventory','insumos','config','clientes'];
+  const paths = ['users','inventory','insumos','config','clientes','cronograma'];
   const res = await Promise.all(paths.map(p =>
     fetch(`${FB_URL}/${p}.json`).then(r=>{
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -689,6 +754,7 @@ async function apiGet(){
   INS      = toArr(res[2]);
   CONFIG   = res[3] || {};
   CLIENTES = toArr(res[4]);
+  CRONO    = toArr(res[5]);
   insumosReady = true;
   backendVersion = 'firebase';
 }
@@ -775,6 +841,7 @@ async function reloadData(){
     await apiGet(); hideSync();
     populateCatFilter(); renderStats(); renderTable(); renderAdminTable(); renderUserTable();
     populateInsCatFilter(); renderInsStats(); renderInsTable(); renderAdminInsTable();
+    populateCronoFilters(); renderCronoStats(); renderCronograma();
   }
   catch(e){ hideSync(); alert('No se pudo actualizar: '+e.message); }
 }
@@ -784,10 +851,12 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('nav-inv').classList.toggle('active', p==='inventario');
   document.getElementById('nav-ins').classList.toggle('active', p==='insumos');
+  document.getElementById('nav-cro').classList.toggle('active', p==='cronograma');
   document.getElementById('nav-adm').classList.toggle('active', p==='admin');
   document.getElementById('page-'+p).classList.add('active');
   if(p==='inventario'){ populateCatFilter(); renderStats(); renderTable(); }
   if(p==='insumos'){ populateInsCatFilter(); renderInsStats(); renderInsTable(); }
+  if(p==='cronograma'){ populateCronoFilters(); renderCronoStats(); renderCronograma(); }
   if(p==='admin'){ renderAdminTable(); renderAdminInsTable(); renderUserTable(); renderClientesTable(); renderLogoPrev(); }
 }
 
@@ -1562,6 +1631,132 @@ function crearPDF(g){
 
   const safe = g.cliente.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,30) || 'cliente';
   doc.save(`${g.numero} - ${safe}.pdf`);
+}
+
+/* ═══════════════ CRONOGRAMA DE TRABAJOS ═══════════════ */
+let editTrabajoId=null;
+
+function estadoBadge(e){
+  const m={
+    'Terminado':'background:#e8f8f0;color:#1a7a45',
+    'En proceso':'background:#e6f1fb;color:#185fa5',
+    'Pendiente':'background:#f1efe8;color:#5f5e5a'
+  };
+  const st=m[e]||m['Pendiente'];
+  return `<span class="badge" style="${st}">${e||'Pendiente'}</span>`;
+}
+
+function croSorted(){
+  return CRONO.slice().sort((a,b)=>{
+    const da=a.desmontaje||'9999', db=b.desmontaje||'9999';
+    if(da!==db) return da<db?-1:1;
+    return String(a.cliente||'').localeCompare(String(b.cliente||''));
+  });
+}
+
+function renderCronoStats(){
+  const d=CRONO;
+  const pend=d.filter(x=>(x.estado||'Pendiente')==='Pendiente').length;
+  const proc=d.filter(x=>x.estado==='En proceso').length;
+  const term=d.filter(x=>x.estado==='Terminado').length;
+  document.getElementById('cro-stat-cards').innerHTML=`
+    <div class="card"><label>Total trabajos</label><div class="val">${d.length}</div></div>
+    <div class="card"><label>Pendientes</label><div class="val warn">${pend}</div></div>
+    <div class="card"><label>En proceso</label><div class="val" style="color:#185fa5">${proc}</div></div>
+    <div class="card"><label>Terminados</label><div class="val ok">${term}</div></div>`;
+}
+
+function populateCronoFilters(){
+  const clis=[...new Set(CRONO.map(x=>x.cliente))].filter(Boolean).sort();
+  const sel=document.getElementById('cro-filter-cli');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todos los clientes</option>'+clis.map(c=>`<option>${c}</option>`).join('');
+  sel.value=cur;
+}
+
+function renderCronograma(){
+  const admin=esAdmin();
+  document.getElementById('cro-add-btn').style.display = admin?'':'none';
+  document.getElementById('cro-acc-th').style.display = admin?'':'none';
+  const q=(document.getElementById('cro-search').value||'').toLowerCase();
+  const fc=document.getElementById('cro-filter-cli').value;
+  const fe=document.getElementById('cro-filter-est').value;
+  const data=croSorted().filter(t=>{
+    const m=!q||[t.cliente,t.equipo,t.responsable,t.proyecto].join(' ').toLowerCase().includes(q);
+    const cm=!fc||t.cliente===fc;
+    const em=!fe||(t.estado||'Pendiente')===fe;
+    return m&&cm&&em;
+  });
+  const tbody=document.getElementById('cro-tbl');
+  const empty=document.getElementById('cro-empty');
+  if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(t=>`<tr>
+    <td><strong>${t.cliente||'—'}</strong>${t.proyecto?`<br><small style="color:#aaa">${t.proyecto}</small>`:''}</td>
+    <td style="text-align:center">${t.cantidad||''}</td>
+    <td>${t.equipo||'—'}</td>
+    <td style="color:#555;font-size:13px">${t.responsable||'—'}</td>
+    <td style="font-size:13px">${t.desmontaje?fmtFecha(t.desmontaje):'—'}</td>
+    <td style="font-size:13px">${t.montaje?fmtFecha(t.montaje):'—'}</td>
+    <td>${estadoBadge(t.estado)}</td>
+    ${admin?`<td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openTrabajoModal(${t.id})">✏</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteTrabajo(${t.id})">✕</button>
+    </td>`:''}
+  </tr>`).join('');
+}
+
+function openTrabajoModal(id=null){
+  if(!esAdmin()){ alert('Solo los administradores pueden modificar el cronograma.'); return; }
+  editTrabajoId=id;
+  document.getElementById('mt-title').textContent=id?'Editar trabajo':'Agregar trabajo';
+  document.getElementById('mt-err').textContent='';
+  document.getElementById('mt-clientes-list').innerHTML=
+    CLIENTES.map(c=>`<option value="${c.nombre}">`).join('');
+  const t = id ? CRONO.find(x=>Number(x.id)===Number(id)) : null;
+  document.getElementById('mt-cliente').value  = t ? (t.cliente||'')   : '';
+  document.getElementById('mt-proyecto').value = t ? (t.proyecto||'')  : '';
+  document.getElementById('mt-cant').value     = t ? (t.cantidad||'')  : '';
+  document.getElementById('mt-estado').value   = t ? (t.estado||'Pendiente') : 'Pendiente';
+  document.getElementById('mt-equipo').value   = t ? (t.equipo||'')    : '';
+  document.getElementById('mt-resp').value     = t ? (t.responsable||''): '';
+  document.getElementById('mt-desm').value     = t ? (t.desmontaje||''): '';
+  document.getElementById('mt-mont').value     = t ? (t.montaje||'')   : '';
+  document.getElementById('mt-notas').value    = t ? (t.notas||'')     : '';
+  document.getElementById('mo-trabajo').classList.add('open');
+}
+
+async function saveTrabajo(){
+  const err=document.getElementById('mt-err'); err.textContent='';
+  const cliente=document.getElementById('mt-cliente').value.trim();
+  const equipo=document.getElementById('mt-equipo').value.trim();
+  if(!cliente||!equipo){ err.textContent='Cliente y equipo son obligatorios.'; return; }
+  const item={
+    cliente,
+    proyecto:document.getElementById('mt-proyecto').value.trim(),
+    cantidad:document.getElementById('mt-cant').value.trim(),
+    equipo,
+    responsable:document.getElementById('mt-resp').value.trim(),
+    desmontaje:document.getElementById('mt-desm').value,
+    montaje:document.getElementById('mt-mont').value,
+    estado:document.getElementById('mt-estado').value,
+    notas:document.getElementById('mt-notas').value.trim()
+  };
+  if(editTrabajoId) item.id=Number(editTrabajoId);
+  const btn=document.getElementById('mt-save'); btn.disabled=true;
+  try{
+    await apiPost({type:'trabajo', action:'save', item});
+    closeMo('mo-trabajo');
+    populateCronoFilters(); renderCronoStats(); renderCronograma();
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  btn.disabled=false;
+}
+
+async function deleteTrabajo(id){
+  const t=CRONO.find(x=>Number(x.id)===Number(id)); if(!t) return;
+  if(!confirm(`¿Eliminar el trabajo "${t.equipo}" de ${t.cliente}?`)) return;
+  try{ await apiPost({type:'trabajo', action:'delete', id:Number(id)}); populateCronoFilters(); renderCronoStats(); renderCronograma(); }
+  catch(e){ alert('Error al eliminar: '+e.message); }
 }
 
 /* ═══════════════ ETIQUETAS DE ENVÍO ═══════════════ */
