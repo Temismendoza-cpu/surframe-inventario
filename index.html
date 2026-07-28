@@ -2,7 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Surframe – Inventario</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -30,7 +32,9 @@ header{background:#fff;border-bottom:2px solid #111;padding:0 2rem;display:flex;
 .hlogo-text span{font-size:8.5px;letter-spacing:1.8px;text-transform:uppercase;color:#666;display:block}
 nav{display:flex;gap:4px}
 nav button{background:none;border:none;padding:8px 18px;border-radius:var(--r);cursor:pointer;font-size:14px;font-weight:500;color:#666;transition:.15s}
-nav button.active,nav button:hover{background:#111;color:#fff}
+nav button.active{background:#111;color:#fff}
+/* Solo con mouse: en pantallas táctiles el resaltado se quedaba pegado tras tocar */
+@media(hover:hover){ nav button:hover{background:#111;color:#fff} }
 .huser{display:flex;align-items:center;gap:10px;font-size:13px;color:#555}
 .huser strong{color:#111}
 .badge-role{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
@@ -127,13 +131,46 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .cal-punto.desm{background:#e67e22}.cal-punto.mont{background:#219150}
 .cal-leyenda{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#666;align-items:center}
 .cal-leyenda span{display:flex;align-items:center;gap:6px}
+.cal-mas{font-size:9px;font-weight:700;color:#999;line-height:1}
+
+/* ── AGENDA (lista del mes) — se muestra bajo el calendario en pantallas chicas ── */
+.cal-agenda{display:none;margin-top:16px;border-top:1px solid #eee;padding-top:14px}
+.cal-agenda-tit{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#999;margin-bottom:10px}
+.cal-agenda-vacia{font-size:13px;color:#bbb;text-align:center;padding:14px 0}
+.ag-dia{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid #f4f4f4}
+.ag-dia:last-child{border-bottom:none}
+.ag-fecha{flex:0 0 42px;text-align:center;padding-top:2px}
+.ag-num{display:block;font-size:19px;font-weight:700;line-height:1.15;border-radius:8px}
+.ag-dow{display:block;font-size:9.5px;font-weight:600;letter-spacing:.06em;color:#aaa;margin-top:3px}
+.ag-dia.hoy .ag-num{background:#111;color:#fff}
+.ag-dia.hoy .ag-dow{color:#111}
+.ag-items{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.ag-item{border-left:3px solid #ccc;background:#fafafa;border-radius:0 9px 9px 0;padding:8px 11px;cursor:pointer}
+.ag-item.desm{border-left-color:#e67e22;background:#fef8f1}
+.ag-item.mont{border-left-color:#219150;background:#f1faf5}
+.ag-item.hecho{opacity:.55}
+.ag-item.hecho .ag-equipo{text-decoration:line-through}
+.ag-tipo{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8a8a8a}
+.ag-item.desm .ag-tipo{color:#9c6a10}
+.ag-item.mont .ag-tipo{color:#1a7a45}
+.ag-equipo{font-size:13.5px;font-weight:600;margin-top:2px;line-height:1.3}
+.ag-cli{font-size:12px;color:#777;margin-top:3px;line-height:1.35}
+
 @media(max-width:600px){
+  .cal-wrap{padding:11px 10px}
+  .cal-nav{gap:9px;margin-bottom:12px}
+  .cal-mes{order:-1;width:100%;text-align:center;font-size:16px}
+  .cal-nav>div:first-child{width:100%;justify-content:center}
+  .cal-leyenda{width:100%;justify-content:center;font-size:11.5px;gap:18px}
   .calendario{gap:3px}
-  .calendario .celda{min-height:56px;padding:4px 3px;border-radius:8px}
-  .calendario .celda.con-ev{cursor:pointer}
-  .calendario .dia-nombre{font-size:9px;letter-spacing:.04em}
+  .calendario .celda{min-height:54px;padding:4px 2px;border-radius:9px;align-items:center;gap:4px}
+  .calendario .celda.con-ev{cursor:pointer;background:#fcfcfc;border-color:#e4e4e4}
+  .calendario .celda .numero{font-size:12.5px;align-self:flex-start;padding-left:3px}
+  .calendario .dia-nombre{font-size:9px;letter-spacing:.02em}
   .cal-full{display:none}
-  .cal-dots{display:flex;flex-wrap:wrap;gap:3px}
+  .cal-dots{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-items:center}
+  .cal-punto{width:7px;height:7px}
+  .cal-agenda{display:block}
 }
 
 /* ── TOAST / SYNC ── */
@@ -162,7 +199,9 @@ tbody td{padding:10px 14px;vertical-align:middle}
   .section-hd h3{font-size:17px}
 
   /* Tarjetas de resumen */
-  .cards{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.2rem}
+  .cards{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1.2rem}
+  /* Si queda una tarjeta suelta al final, ocupa el ancho completo */
+  .cards .card:last-child:nth-child(odd){grid-column:1/-1}
   .card{padding:.75rem .85rem}
   .card label{font-size:10px}
   .card .val{font-size:21px}
@@ -170,28 +209,80 @@ tbody td{padding:10px 14px;vertical-align:middle}
   /* Barra de filtros: campos a lo ancho */
   .toolbar{gap:8px}
   .toolbar input{min-width:0;flex:1 1 100%}
-  .toolbar select{flex:1 1 46%;min-width:0}
+  .toolbar select{flex:1 1 46%;min-width:0;padding-right:26px}
+  .toolbar .btn{flex:1 1 46%}
+  /* Grupo Tabla / Calendario: ocupa la fila completa, mitad y mitad */
+  .toolbar>div{flex:1 1 100%;display:flex;gap:6px}
+  .toolbar>div .btn{flex:1 1 50%}
+
+  /* Botones cómodos para el dedo */
+  .btn{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+  .btn-sm{padding:8px 12px;font-size:13px}
+  .section-hd .btn{flex:1 1 auto}
 
   /* Pestañas del panel admin: deslizables en horizontal */
   .atabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
   .atabs::-webkit-scrollbar{display:none}
   .atab{flex:0 0 auto;padding:9px 14px;font-size:13px}
 
-  /* Tablas: se deslizan en horizontal en vez de aplastar el texto */
-  .tbl-wrap{-webkit-overflow-scrolling:touch}
-  .tbl-wrap table{min-width:720px}
-  /* nombres y subtítulos en una sola línea: se desliza en vez de partirse */
-  tbody td strong,tbody td small,tbody td code{white-space:nowrap}
-  table{font-size:13px}
-  thead th{padding:9px 10px;font-size:10px}
-  tbody td{padding:8px 10px}
+  /* ── Tablas → fichas apiladas: todo se lee sin desplazar en horizontal ── */
+  .tbl-wrap{background:transparent;border:none;border-radius:0;overflow:visible}
+  .tbl-wrap table{display:block;width:100%;min-width:0;font-size:14px}
+  .tbl-wrap thead{display:none}
+  .tbl-wrap tbody{display:block}
+  .tbl-wrap tbody tr{
+    display:block;background:#fff;border:1px solid #e4e4e4;border-radius:12px;
+    padding:11px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)
+  }
+  .tbl-wrap tbody tr:last-child{margin-bottom:0}
+  .tbl-wrap tbody tr:hover{background:#fff}
+  .tbl-wrap tbody td{
+    display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+    padding:5px 0;border:none;text-align:right;white-space:normal
+  }
+  .tbl-wrap tbody td::before{
+    content:attr(data-lbl);flex:0 0 auto;text-align:left;
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9a9a9a
+  }
+  .tbl-wrap tbody td>.tdv{flex:1 1 auto;min-width:0;text-align:right}
+  .tbl-wrap tbody td.sin-dato,.tbl-wrap tbody td:empty{display:none}
+  /* La primera celda encabeza la ficha */
+  .tbl-wrap tbody td:first-child{
+    padding:0 0 9px;margin-bottom:5px;border-bottom:1px solid #f0f0f0;font-size:15px
+  }
+  .tbl-wrap tbody td:first-child code{font-size:14px !important;font-weight:600;color:#111 !important}
+  /* Nombres y notas: se parten en varias líneas en vez de recortarse */
+  .tbl-wrap tbody td strong,.tbl-wrap tbody td small,.tbl-wrap tbody td code{white-space:normal}
+  .tbl-wrap tbody td br+small{display:inline-block;margin-top:2px}
+  /* Celdas de acción: botones a lo ancho, debajo del resto */
+  .tbl-wrap tbody td[data-lbl="Acciones"],
+  .tbl-wrap tbody td[data-lbl="Egreso"],
+  .tbl-wrap tbody td[data-lbl="PDF"]{
+    flex-wrap:wrap;justify-content:flex-start;gap:6px;white-space:normal !important;
+    padding-top:10px;margin-top:5px;border-top:1px solid #f0f0f0
+  }
+  .tbl-wrap tbody td[data-lbl="Acciones"]::before,
+  .tbl-wrap tbody td[data-lbl="Egreso"]::before,
+  .tbl-wrap tbody td[data-lbl="PDF"]::before{flex:1 0 100%;padding-bottom:3px}
+  .tbl-wrap tbody td[data-lbl="Acciones"]>.tdv,
+  .tbl-wrap tbody td[data-lbl="Egreso"]>.tdv,
+  .tbl-wrap tbody td[data-lbl="PDF"]>.tdv{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+  .tbl-wrap tbody td[data-lbl="Acciones"] .btn,
+  .tbl-wrap tbody td[data-lbl="Egreso"] .btn,
+  .tbl-wrap tbody td[data-lbl="PDF"] .btn{flex:1 1 auto;margin-left:0 !important}
+  .empty{background:#fff;border:1px solid #e4e4e4;border-radius:12px;padding:2.2rem 1rem}
 
-  /* Ventanas emergentes */
-  .modal{padding:1.25rem 1.1rem;border-radius:12px;margin:.5rem;max-height:94vh}
+  /* Ventanas emergentes: hoja que sube desde abajo, más cómoda de alcanzar */
+  .overlay{align-items:flex-end}
+  .modal{padding:1.25rem 1.1rem 0;border-radius:16px 16px 0 0;margin:0;max-width:100%;max-height:92vh}
   .modal h2{font-size:16px;margin-bottom:1.1rem}
   .form-grid,.form-grid-3{grid-template-columns:1fr}
-  .modal-actions{flex-wrap:wrap}
-  .modal-actions .btn{flex:1 1 auto}
+  /* Los botones quedan siempre a la vista al pie de la ventana */
+  .modal-actions{
+    flex-wrap:wrap;position:sticky;bottom:0;background:#fff;margin-top:1.3rem;
+    padding:.9rem 0 calc(.9rem + env(safe-area-inset-bottom))
+  }
+  .modal-actions .btn{flex:1 1 auto;min-height:44px}
 
   /* 16px evita que iOS haga zoom automático al tocar un campo */
   .form-group input,.form-group select,.form-group textarea,
@@ -203,11 +294,18 @@ tbody td{padding:10px 14px;vertical-align:middle}
   #gd-cant{width:100% !important}
 
   .login-card{padding:1.9rem 1.3rem}
+
+  /* Aire al final para que el último elemento no quede bajo la barra del teléfono */
+  main{padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))}
+  #sync{bottom:calc(16px + env(safe-area-inset-bottom))}
 }
 @media(max-width:420px){
-  .cards{grid-template-columns:1fr 1fr}
-  .hlogo-text span{display:none}
-  .hlogo-text strong{font-size:13px}
+  /* Solo en la barra superior: en el login sí hay espacio para el lema */
+  header .hlogo-text span{display:none}
+  header .hlogo-text strong{font-size:13px}
+  .card .val{font-size:19px}
+  main{padding-left:.6rem;padding-right:.6rem}
+  .tbl-wrap tbody tr{padding:10px 12px}
 }
 </style>
 </head>
@@ -379,6 +477,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
             </div>
           </div>
           <div class="calendario" id="cal-grid"></div>
+          <div class="cal-agenda" id="cal-agenda"></div>
         </div>
       </div>
 
@@ -709,7 +808,9 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="form-group"><label>Población / Ciudad</label><input id="et-pob"></div>
       <div class="form-group"><label>Código postal</label><input id="et-cp"></div>
       <div class="form-group"><label>Provincia / Región</label><input id="et-prov"></div>
-      <div class="form-group"><label>N° de bultos</label><input id="et-bultos" type="number" min="1" value="1"></div>
+      <div class="form-group"><label>N° de bultos</label><input id="et-bultos" type="number" min="1" value="1">
+        <small style="color:#999;font-size:11px">Se genera una etiqueta por bulto (Bulto 1/3, 2/3, 3/3…)</small>
+      </div>
       <div class="form-group"><label>Peso (kg)</label><input id="et-peso" placeholder="Ej: 12.5"></div>
       <div class="form-group"><label>Fecha</label><input id="et-fecha" type="date"></div>
       <div class="form-group full"><label>Referencia</label><input id="et-ref" placeholder="Ej: N° de pedido o guía"></div>
@@ -720,7 +821,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
     <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
       <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:10px">Formato de impresión</label>
-      <div class="form-grid form-grid-3">
+      <div class="form-grid">
         <div class="form-group"><label>Tamaño de hoja</label>
           <select id="et-size">
             <option value="a4">A4 (210×297 mm)</option>
@@ -737,9 +838,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
             <option value="8">8 por hoja</option>
           </select>
         </div>
-        <div class="form-group"><label>Cantidad de etiquetas</label><input id="et-cant" type="number" min="1" value="1"></div>
       </div>
-      <small style="color:#999;font-size:12px;display:block;margin-top:4px">La misma etiqueta se repite la cantidad indicada y se acomoda en las hojas según el formato elegido.</small>
+      <small style="color:#999;font-size:12px;display:block;margin-top:4px">Se genera una etiqueta numerada por cada bulto y se acomodan en las hojas según el formato elegido.</small>
     </div>
 
     <div class="modal-err" id="et-err"></div>
@@ -1122,7 +1222,7 @@ function openPieceModal(id=null){
     document.getElementById('mp-min').value='';
     document.getElementById('mp-prc').value='';
     document.getElementById('mp-mat').value='AISI 304';
-    document.getElementById('mp-cat').value='Tubería';
+    document.getElementById('mp-cat').value='Piñón';   /* antes 'Tubería': no existe en la lista y el campo quedaba vacío */
     document.getElementById('mp-uni').value='unidades';
   }
   document.getElementById('mo-pieza').classList.add('open');
@@ -1988,7 +2088,10 @@ function renderCalendario(){
       const tit=`${et} · ${e.t.equipo} · ${e.t.cliente}${e.t.responsable?' · '+e.t.responsable:''}`;
       return `<div class="cal-ev ${e.tipo}${e.hecho?' hecho':''}" data-id="${e.t.id}" title="${String(tit).replace(/"/g,'&quot;')}">${e.t.equipo}</div>`;
     }).join('');
-    const puntos=del.map(e=>`<span class="cal-punto ${e.tipo}"></span>`).join('');
+    /* En móvil la celda es chica: como máximo 4 puntos y el resto se resume en "+n" */
+    const MAX_PUNTOS=4;
+    const puntos=del.slice(0,MAX_PUNTOS).map(e=>`<span class="cal-punto ${e.tipo}"></span>`).join('')
+      + (del.length>MAX_PUNTOS?`<span class="cal-mas">+${del.length-MAX_PUNTOS}</span>`:'');
     html+=`<div class="celda${fuera?' fuera':''}${iso===_hoyISO()?' hoy':''}${del.length?' con-ev':''}" data-fecha="${iso}">
       <div class="numero">${d.getDate()}</div>
       <div class="cal-full">${barras}</div>
@@ -2012,6 +2115,41 @@ function renderCalendario(){
       const celda=ev.closest('.celda');
       abrirDiaCal(celda.dataset.fecha, porDia[celda.dataset.fecha]||[]);
     }
+  };
+  renderCalAgenda(porDia);
+}
+
+/* ── Agenda del mes: lista cronológica, pensada para leer en el teléfono ── */
+function renderCalAgenda(porDia){
+  const cont=document.getElementById('cal-agenda');
+  if(!cont) return;
+  const dias=Object.keys(porDia).filter(f=>f.slice(0,7)===CAL_MES).sort();
+  if(!dias.length){
+    cont.innerHTML='<div class="cal-agenda-tit">Agenda del mes</div>'+
+      '<div class="cal-agenda-vacia">Sin trabajos programados este mes.</div>';
+    return;
+  }
+  const hoy=_hoyISO();
+  cont.innerHTML='<div class="cal-agenda-tit">Agenda del mes</div>'+dias.map(iso=>{
+    const d=new Date(iso+'T12:00:00');
+    return `<div class="ag-dia${iso===hoy?' hoy':''}">
+      <div class="ag-fecha">
+        <span class="ag-num">${d.getDate()}</span>
+        <span class="ag-dow">${DIAS_CORTO[d.getDay()]}</span>
+      </div>
+      <div class="ag-items">${porDia[iso].map(e=>`
+        <div class="ag-item ${e.tipo}${e.hecho?' hecho':''}" data-fecha="${iso}">
+          <div class="ag-tipo">${e.tipo==='desm'?'Desmontaje':'Montaje'}</div>
+          <div class="ag-equipo">${e.t.equipo||'—'}</div>
+          <div class="ag-cli">${e.t.cliente||''}${e.t.cantidad?' · '+e.t.cantidad+' u.':''}${e.t.responsable?' · '+e.t.responsable:''}</div>
+        </div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  cont.onclick=e=>{
+    const it=e.target.closest('.ag-item');
+    if(!it) return;
+    const f=it.dataset.fecha;
+    abrirDiaCal(f, porDia[f]||[]);
   };
 }
 
@@ -2108,7 +2246,6 @@ function openEtiquetaModal(){
   sel.value='';
   ['et-envio','et-dir','et-pob','et-cp','et-prov','et-peso','et-ref'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('et-bultos').value='1';
-  document.getElementById('et-cant').value='1';
   document.getElementById('et-fecha').value=new Date().toISOString().slice(0,10);
   document.getElementById('et-remite').value = CONFIG.remite || 'Surframe\nSolutions for the food industry';
   document.getElementById('mo-etiqueta').classList.add('open');
@@ -2174,7 +2311,7 @@ function drawEtiqueta(doc, x, y, w, h, d){
     doc.setFont('helvetica','normal');
     doc.text(_fit(doc,val,maxW-lw-1), cx+lw+1, by);
   };
-  par(colB,'N° BULTOS:', d.bultos, (colP-colB)); par(colP,'PESO KG:', d.peso, (x+w-pad-colP)); by+=lh;
+  par(colB,'BULTO:', d.bultoTxt||d.bultos, (colP-colB)); par(colP,'PESO KG:', d.peso, (x+w-pad-colP)); by+=lh;
   par(colB,'FECHA:', d.fecha, (colP-colB)); par(colP,'REF.:', d.ref, (x+w-pad-colP));
 
   // ── Sección 3: remite + logo ──
@@ -2204,8 +2341,9 @@ async function generarEtiquetas(){
   if(!esAdmin()){ err.textContent='Solo los administradores pueden generar etiquetas.'; return; }
   const envio=document.getElementById('et-envio').value.trim();
   if(!envio){ err.textContent='Indica el destinatario (Envío a).'; return; }
-  const cant=parseInt(document.getElementById('et-cant').value)||1;
-  if(cant<1 || cant>500){ err.textContent='La cantidad debe estar entre 1 y 500.'; return; }
+  const bultos=parseInt(document.getElementById('et-bultos').value)||1;
+  if(bultos<1 || bultos>500){ err.textContent='El N° de bultos debe estar entre 1 y 500.'; return; }
+  const cant=bultos;   // una etiqueta por bulto
   const perPage=parseInt(document.getElementById('et-perpage').value)||4;
   const size=document.getElementById('et-size').value;
   const remite=document.getElementById('et-remite').value.trim();
@@ -2216,7 +2354,6 @@ async function generarEtiquetas(){
     pob:document.getElementById('et-pob').value.trim(),
     cp:document.getElementById('et-cp').value.trim(),
     prov:document.getElementById('et-prov').value.trim(),
-    bultos:document.getElementById('et-bultos').value.trim(),
     peso:document.getElementById('et-peso').value.trim(),
     fecha:fmtFecha(document.getElementById('et-fecha').value),
     ref:document.getElementById('et-ref').value.trim(),
@@ -2244,7 +2381,8 @@ async function generarEtiquetas(){
       if(i>0 && enHoja===0) doc.addPage();
       const c=enHoja%cols, r=Math.floor(enHoja/cols);
       const x=margin+c*(lw+gap), y=margin+r*(lh+gap);
-      drawEtiqueta(doc, x, y, lw, lh, d);
+      // Cada etiqueta muestra su número de bulto: 1/N, 2/N, …
+      drawEtiqueta(doc, x, y, lw, lh, {...d, bultoTxt:`${i+1}/${bultos}`});
     }
     const safe=(envio.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,25))||'envio';
     doc.save(`Etiquetas - ${safe}.pdf`);
@@ -2319,6 +2457,34 @@ async function confirmMov(){
     alert('No se pudo guardar el movimiento: '+e.message+'\nEl stock se restauró a '+prevQty+'.');
   }
 }
+
+/* ═══ ETIQUETAS DE COLUMNA (vista de fichas en móvil) ═══
+   Copia el título de cada columna a su celda (data-lbl). En pantallas chicas el CSS
+   convierte cada fila en una ficha y muestra ese título junto al dato. */
+function etiquetarCeldas(tbody){
+  const tabla=tbody.closest('table');
+  if(!tabla) return;
+  const titulos=[...tabla.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    [...tr.children].forEach((td,i)=>{
+      if(titulos[i]) td.setAttribute('data-lbl', titulos[i]);
+      /* El contenido va dentro de un span: así el dato se mantiene junto al lado
+         del título aunque tenga saltos de línea (nombre + categoría, por ejemplo). */
+      let v=td.firstElementChild;
+      if(!(td.childNodes.length===1 && v && v.classList.contains('tdv'))){
+        v=document.createElement('span'); v.className='tdv';
+        while(td.firstChild) v.appendChild(td.firstChild);
+        td.appendChild(v);
+      }
+      td.classList.toggle('sin-dato', !td.textContent.trim() && !td.querySelector('button,img,svg'));
+    });
+  });
+}
+document.querySelectorAll('.tbl-wrap tbody').forEach(tb=>{
+  etiquetarCeldas(tb);
+  /* Las tablas se repintan con innerHTML: al cambiar los hijos se vuelven a etiquetar */
+  new MutationObserver(()=>etiquetarCeldas(tb)).observe(tb,{childList:true});
+});
 
 /* ═══ MODAL HELPERS ═══ */
 function closeMo(id){ document.getElementById(id).classList.remove('open'); }
