@@ -513,7 +513,14 @@ tbody td{padding:10px 14px;vertical-align:middle}
           </div>
         </div>
         <div class="toolbar">
-          <input type="text" id="adm-search" placeholder="Buscar…" oninput="renderAdminTable()">
+          <input type="text" id="adm-search" placeholder="Buscar por código o nombre…" oninput="renderAdminTable()">
+          <select id="adm-filter-cat" onchange="renderAdminTable()"><option value="">Todas las categorías</option></select>
+          <select id="adm-filter-stock" onchange="renderAdminTable()">
+            <option value="">Todo el stock</option>
+            <option value="ok">Stock OK</option>
+            <option value="warn">Stock bajo</option>
+            <option value="danger">Sin stock</option>
+          </select>
         </div>
         <div class="tbl-wrap">
           <table>
@@ -1139,7 +1146,7 @@ function showPage(p){
   if(p==='inventario'){ populateCatFilter(); renderStats(); renderTable(); }
   if(p==='insumos'){ populateInsCatFilter(); renderInsStats(); renderInsTable(); }
   if(p==='cronograma'){ populateCronoFilters(); renderCronoStats(); croRefresh(); }
-  if(p==='admin'){ renderAdminTable(); renderAdminInsTable(); renderUserTable(); renderClientesTable(); renderLogoPrev(); }
+  if(p==='admin'){ populateCatFilter(); renderAdminTable(); renderAdminInsTable(); renderUserTable(); renderClientesTable(); renderLogoPrev(); }
 }
 
 function switchAdminTab(t){
@@ -1176,26 +1183,46 @@ function stockBadge(d){
 }
 
 function populateCatFilter(){
-  const d=getInv(); const cats=[...new Set(d.map(x=>x.categoria))].filter(Boolean).sort();
-  const sel=document.getElementById('filter-cat');
-  const cur=sel.value;
-  sel.innerHTML='<option value="">Todas las categorías</option>';
-  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-  sel.value=cur;
+  const cats=[...new Set(getInv().map(x=>x.categoria))].filter(Boolean).sort();
+  ['filter-cat','adm-filter-cat'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Todas las categorías</option>';
+    cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+    sel.value=cur;
+  });
+}
+
+/* Normaliza a minúsculas y sin acentos (búsqueda tolerante: "reten" encuentra "Retén") */
+function normTxt(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+/* Coincidencia con prioridad por prefijo:
+   -1 = no coincide · 0 = prefijo (código o palabra del nombre empieza con lo escrito) · 1 = subcadena */
+function invMatchScore(d, q){
+  q=normTxt(q);
+  if(!q) return 0;
+  const cod=normTxt(d.codigo);
+  const nom=normTxt(d.nombre);
+  const mod=normTxt(d.modelo);
+  const cat=normTxt(d.categoria);
+  if(cod.startsWith(q) || nom.split(/\s+/).some(w=>w.startsWith(q))) return 0;
+  if(cod.includes(q)||nom.includes(q)||mod.includes(q)||cat.includes(q)) return 1;
+  return -1;
 }
 
 function renderTable(){
   const data=getInv();
-  const q=(document.getElementById('search').value||'').toLowerCase();
+  const q=(document.getElementById('search').value||'').trim().toLowerCase();
   const cat=document.getElementById('filter-cat').value;
   const st=document.getElementById('filter-stock').value;
-  const f=data.filter(d=>{
-    const m=!q||[d.codigo,d.nombre,d.modelo,d.categoria].join(' ').toLowerCase().includes(q);
-    const cm=!cat||d.categoria===cat;
+  let f=data.filter(d=>{
+    if(invMatchScore(d,q)<0) return false;
+    if(cat&&d.categoria!==cat) return false;
     const qy=Number(d.qty), mn=Number(d.min);
     const sm=!st||(st==='ok'&&qy>mn)||(st==='warn'&&qy>0&&qy<=mn)||(st==='danger'&&qy===0);
-    return m&&cm&&sm;
+    return sm;
   });
+  if(q) f.sort((a,b)=>invMatchScore(a,q)-invMatchScore(b,q)||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
   const tbody=document.getElementById('tbl-body');
   const empty=document.getElementById('tbl-empty');
   if(!f.length){tbody.innerHTML='';empty.style.display='block';return;}
@@ -1216,8 +1243,16 @@ function renderTable(){
 let editPieceId=null;
 
 function renderAdminTable(){
-  const q=(document.getElementById('adm-search')?.value||'').toLowerCase();
-  const data=getInv().filter(d=>!q||[d.codigo,d.nombre,d.modelo].join(' ').toLowerCase().includes(q));
+  const q=(document.getElementById('adm-search')?.value||'').trim().toLowerCase();
+  const cat=document.getElementById('adm-filter-cat')?.value||'';
+  const st=document.getElementById('adm-filter-stock')?.value||'';
+  let data=getInv().filter(d=>{
+    if(invMatchScore(d,q)<0) return false;
+    if(cat&&d.categoria!==cat) return false;
+    const qy=Number(d.qty), mn=Number(d.min);
+    return !st||(st==='ok'&&qy>mn)||(st==='warn'&&qy>0&&qy<=mn)||(st==='danger'&&qy===0);
+  });
+  if(q) data.sort((a,b)=>invMatchScore(a,q)-invMatchScore(b,q)||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
   const tbody=document.getElementById('adm-tbl');
   const empty=document.getElementById('adm-empty');
   if(!data.length){tbody.innerHTML='';empty.style.display='block';return;}
