@@ -398,7 +398,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <option value="danger">Sin stock</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
-        <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="openCsvModal()">⇅ CSV</button>
       </div>
       <div class="tbl-wrap">
         <table>
@@ -932,6 +932,49 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-user')">Cancelar</button>
       <button class="btn btn-primary" id="mu-save" onclick="saveUser()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL IMPORTAR / EXPORTAR CSV ════ -->
+<div class="overlay" id="mo-csv">
+  <div class="modal" style="max-width:480px">
+    <h2>Importar / Exportar CSV</h2>
+
+    <!-- EXPORTAR -->
+    <div style="margin-bottom:1.4rem">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:.7rem">⬇ Exportar</h3>
+      <div class="form-group">
+        <label>Categoría a exportar</label>
+        <select id="csv-exp-cat"><option value="">Todas las categorías</option></select>
+      </div>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="exportCSV()">Descargar CSV</button>
+    </div>
+
+    <!-- IMPORTAR (solo admin) -->
+    <div id="csv-import-sec" style="border-top:1px solid #eee;padding-top:1.3rem">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:.4rem">⬆ Importar</h3>
+      <p style="font-size:12px;color:#888;margin-bottom:.9rem;line-height:1.4">
+        El CSV debe tener las mismas columnas que la exportación (mínimo <strong>Código</strong> y <strong>Nombre</strong>).
+        Las piezas cuyo código ya exista se <strong>actualizarán</strong>; el resto se crearán.
+      </p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Solo importar categoría</label>
+          <select id="csv-imp-cat"><option value="">Todas las categorías</option></select>
+        </div>
+        <div class="form-group">
+          <label>Archivo CSV</label>
+          <input type="file" id="csv-file" accept=".csv,text/csv">
+        </div>
+      </div>
+      <div class="modal-err" id="csv-err"></div>
+      <div id="csv-status" style="font-size:13px;margin-top:8px;min-height:16px"></div>
+      <button class="btn btn-primary" id="csv-imp-btn" style="margin-top:12px" onclick="importCSV()">Importar</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-csv')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2491,15 +2534,149 @@ function closeMo(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
 
 /* ═══ EXPORT CSV ═══ */
+const CSV_HDR=['Código','Categoría','Nombre','Modelo','Material','Dim 1','Dim 2','Dim 3','Cantidad','Unidad','Stock mín','Precio','Notas'];
+
+/* Mapa de encabezados → campo interno (tolerante a alias/acentos) */
+const CSV_HDR_MAP={
+  'código':'codigo','codigo':'codigo','code':'codigo',
+  'categoría':'categoria','categoria':'categoria','category':'categoria',
+  'nombre':'nombre','name':'nombre',
+  'modelo':'modelo','model':'modelo','referencia':'modelo','modelo / referencia':'modelo',
+  'material':'material',
+  'dim 1':'d1','dim1':'d1','d1':'d1','dimensión principal':'d1','dimension principal':'d1',
+  'dim 2':'d2','dim2':'d2','d2':'d2','largo':'d2','largo / altura':'d2','altura':'d2',
+  'dim 3':'d3','dim3':'d3','d3':'d3','espesor':'d3','espesor / otros':'d3',
+  'cantidad':'qty','qty':'qty','cant.':'qty','cant':'qty','cantidad actual':'qty',
+  'unidad':'unit','unit':'unit',
+  'stock mín':'min','stock min':'min','stock mínimo':'min','stock minimo':'min','mín':'min','min':'min','minimo':'min',
+  'precio':'precio','price':'precio','precio unitario':'precio','precio unitario (clp)':'precio',
+  'notas':'notas','notes':'notas','observaciones':'notas'
+};
+
+function openCsvModal(){
+  document.getElementById('csv-err').textContent='';
+  document.getElementById('csv-status').textContent='';
+  const f=document.getElementById('csv-file'); if(f) f.value='';
+  populateCsvCats();
+  document.getElementById('csv-exp-cat').value=document.getElementById('filter-cat').value||'';
+  document.getElementById('csv-import-sec').style.display=esAdmin()?'block':'none';
+  document.getElementById('mo-csv').classList.add('open');
+}
+
+function populateCsvCats(){
+  const cats=[...new Set(getInv().map(x=>x.categoria))].filter(Boolean).sort();
+  ['csv-exp-cat','csv-imp-cat'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Todas las categorías</option>';
+    cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+    sel.value=cur;
+  });
+}
+
 function exportCSV(){
-  const data=getInv();
-  const hdr=['Código','Categoría','Nombre','Modelo','Material','Dim 1','Dim 2','Dim 3','Cantidad','Unidad','Stock mín','Precio','Notas'];
+  const cat=(document.getElementById('csv-exp-cat')||{}).value||'';
+  let data=getInv();
+  if(cat) data=data.filter(d=>d.categoria===cat);
+  if(!data.length){ alert(cat?'No hay piezas en la categoría "'+cat+'".':'No hay piezas para exportar.'); return; }
   const rows=data.map(d=>[d.codigo,d.categoria,d.nombre,d.modelo,d.material,d.d1,d.d2,d.d3,d.qty,d.unit,d.min,d.precio,d.notas].map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
-  const csv=[hdr.join(','),...rows].join('\n');
+  const csv=[CSV_HDR.join(','),...rows].join('\n');
+  const suffix=cat?'-'+cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''):'';
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
-  a.download='surframe-inventario.csv';
+  a.download='surframe-inventario'+suffix+'.csv';
   a.click();
+}
+
+/* Parser CSV que respeta comillas, comas y saltos de línea dentro de campos */
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const rows=[]; let row=[], field='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; }
+      else field+=c;
+    }else{
+      if(c==='"') inQ=true;
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c==='\r'){ /* ignorar */ }
+      else field+=c;
+    }
+  }
+  if(field!==''||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+
+async function importCSV(){
+  const err=document.getElementById('csv-err');
+  const status=document.getElementById('csv-status');
+  err.textContent=''; status.textContent='';
+  const fileInput=document.getElementById('csv-file');
+  const file=fileInput.files&&fileInput.files[0];
+  if(!file){ err.textContent='Selecciona un archivo CSV.'; return; }
+  const catFilter=document.getElementById('csv-imp-cat').value;
+  let text;
+  try{ text=await file.text(); }catch(e){ err.textContent='No se pudo leer el archivo.'; return; }
+  const rows=parseCSV(text);
+  if(rows.length<2){ err.textContent='El archivo no contiene datos.'; return; }
+  const headers=rows[0].map(h=>String(h).trim().toLowerCase());
+  const idx={};
+  headers.forEach((h,i)=>{ const f=CSV_HDR_MAP[h]; if(f&&!(f in idx)) idx[f]=i; });
+  if(!('codigo' in idx)||!('nombre' in idx)){
+    err.textContent='El CSV debe incluir al menos las columnas "Código" y "Nombre".'; return;
+  }
+  const g=(row,f)=>(f in idx)?String(row[idx[f]]==null?'':row[idx[f]]).trim():'';
+
+  // Reunir filas válidas y decidir id (upsert por código)
+  let nextId=getInv().reduce((m,x)=>Math.max(m,Number(x.id)||0),0);
+  const byCode={}; getInv().forEach(d=>{ byCode[String(d.codigo).toLowerCase()]=Number(d.id); });
+  const seen={}; const batch={}; let created=0, updated=0;
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r];
+    const codigo=g(row,'codigo'), nombre=g(row,'nombre');
+    if(!codigo||!nombre) continue;
+    const categoria=g(row,'categoria')||'Otro';
+    if(catFilter&&categoria!==catFilter) continue;
+    const key=codigo.toLowerCase();
+    let id;
+    if(key in seen){ id=seen[key]; }                         // repetido en el archivo
+    else if(key in byCode){ id=byCode[key]; updated++; }     // ya existe → actualizar
+    else { id=++nextId; created++; }                          // nuevo → crear
+    seen[key]=id;
+    batch[id]={
+      id, codigo, nombre, categoria,
+      modelo:g(row,'modelo'), material:g(row,'material')||'AISI 304',
+      d1:g(row,'d1'), d2:g(row,'d2'), d3:g(row,'d3'),
+      qty:parseInt(g(row,'qty'))||0, min:parseInt(g(row,'min'))||0,
+      unit:g(row,'unit')||'unidades', precio:parseInt(g(row,'precio'))||0,
+      notas:g(row,'notas')
+    };
+  }
+  const total=Object.keys(batch).length;
+  if(!total){ err.textContent=catFilter?'No hay filas de la categoría "'+catFilter+'" en el archivo.':'No se encontraron filas válidas.'; return; }
+  if(!confirm(`Se importarán ${total} pieza(s) (${created} nueva(s), ${updated} actualizada(s)). ¿Continuar?`)) return;
+
+  const btn=document.getElementById('csv-imp-btn'); btn.disabled=true;
+  status.style.color='#555'; status.textContent='Importando…'; showSync('Importando…');
+  try{
+    // Un solo PATCH a Firebase con todas las piezas (rápido)
+    const r=await fetch(`${FB_URL}/${fbPath('piece')}.json`, {method:'PATCH', body:JSON.stringify(batch)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    await apiGet();                       // resincroniza la caché en memoria
+    hideSync();
+    status.style.color='#219150';
+    status.textContent=`Listo: ${created} creada(s), ${updated} actualizada(s).`;
+    populateCatFilter(); populateCsvCats(); renderStats(); renderTable(); renderAdminTable();
+  }catch(e){
+    hideSync();
+    status.style.color='#c0392b';
+    status.textContent='';
+    err.textContent='Error al importar: '+e.message;
+  }
+  btn.disabled=false;
+  fileInput.value='';
 }
 
 /* ═══ INIT ═══ */
