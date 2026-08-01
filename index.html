@@ -986,6 +986,20 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL VISTA PREVIA PDF (GUÍA) ════ -->
+<div class="overlay" id="mo-pdf">
+  <div class="modal" style="max-width:940px;width:94vw;height:92vh;max-height:92vh;padding:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #eee;flex:0 0 auto">
+      <h2 id="pdf-title" style="font-size:15px;font-weight:700;margin:0;padding:0;border:none">Vista previa</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="descargarGuiaActual()">📄 Descargar</button>
+        <button class="btn btn-outline btn-sm" onclick="cerrarPdf()">✕ Cerrar</button>
+      </div>
+    </div>
+    <iframe id="pdf-frame" title="Vista previa de la guía" style="flex:1 1 auto;width:100%;border:0;background:#525659"></iframe>
+  </div>
+</div>
+
 <div id="sync">Guardando…</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1755,7 +1769,8 @@ function renderGuiasTable(){
         ${items.length} ítem${items.length===1?'':'s'} · ${totalU} u.
       </td>
       <td style="white-space:nowrap">
-        <button class="btn btn-outline btn-sm" onclick="descargarGuia('${g.numero}')">📄 Descargar</button>
+        <button class="btn btn-outline btn-sm" onclick="verGuia('${g.numero}')">👁 Ver</button>
+        <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="descargarGuia('${g.numero}')">📄 Descargar</button>
       </td>
     </tr>`;
   }).join('');
@@ -1885,7 +1900,16 @@ async function generarGuia(){
   btn.disabled=false;
 }
 
+function nombreArchivoGuia(g){
+  const safe = String(g.cliente||'').replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,30) || 'cliente';
+  return `${g.numero} - ${safe}.pdf`;
+}
+
 function crearPDF(g){
+  construirGuiaPDF(g).save(nombreArchivoGuia(g));
+}
+
+function construirGuiaPDF(g){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
   const top = 15;
@@ -1946,8 +1970,35 @@ function crearPDF(g){
   doc.setFontSize(8); doc.setTextColor(140);
   doc.text('Surframe — Solutions for the food industry', 105, 287, {align:'center'});
 
-  const safe = g.cliente.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g,'').trim().slice(0,30) || 'cliente';
-  doc.save(`${g.numero} - ${safe}.pdf`);
+  return doc;
+}
+
+/* ═══ VISTA PREVIA DE GUÍA (ventana flotante) ═══ */
+let pdfActual=null;   // {doc, url, nombre}
+
+function verGuia(numero){
+  const g=GUIAS.find(x=>String(x.numero)===String(numero));
+  if(!g){ alert('No se encontró la guía '+numero); return; }
+  const datos={...g, items: toArr(g.items)};
+  let doc;
+  try{ doc=construirGuiaPDF(datos); }
+  catch(e){ alert('No se pudo generar el PDF: '+e.message); return; }
+  if(pdfActual && pdfActual.url) URL.revokeObjectURL(pdfActual.url);
+  const url=URL.createObjectURL(doc.output('blob'));
+  pdfActual={doc, url, nombre:nombreArchivoGuia(datos)};
+  document.getElementById('pdf-title').textContent='Guía '+g.numero+' · '+g.cliente;
+  document.getElementById('pdf-frame').src=url;
+  document.getElementById('mo-pdf').classList.add('open');
+}
+
+function descargarGuiaActual(){
+  if(pdfActual && pdfActual.doc) pdfActual.doc.save(pdfActual.nombre);
+}
+
+function cerrarPdf(){
+  document.getElementById('mo-pdf').classList.remove('open');
+  document.getElementById('pdf-frame').src='about:blank';
+  if(pdfActual && pdfActual.url){ URL.revokeObjectURL(pdfActual.url); pdfActual={...pdfActual, url:null}; }
 }
 
 /* ═══════════════ CRONOGRAMA DE TRABAJOS ═══════════════ */
@@ -2566,7 +2617,7 @@ document.querySelectorAll('.tbl-wrap tbody').forEach(tb=>{
 
 /* ═══ MODAL HELPERS ═══ */
 function closeMo(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this){ if(this.id==='mo-pdf') cerrarPdf(); else this.classList.remove('open'); }}));
 
 /* ═══ EXPORT CSV ═══ */
 const CSV_HDR=['Código','Categoría','Nombre','Modelo','Material','Dim 1','Dim 2','Dim 3','Cantidad','Unidad','Stock mín','Precio','Notas'];
