@@ -108,6 +108,11 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .form-group input:focus,.form-group select:focus{border-color:#111}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #eee}
 .modal-err{color:var(--danger);font-size:13px;margin-top:8px}
+.lnk-plano{margin-left:7px;background:#f1f5fb;color:#185fa5;border:1px solid #d6e3f2;border-radius:6px;
+  font-size:10.5px;font-weight:600;padding:2px 7px;cursor:pointer;font-family:inherit;vertical-align:middle}
+.lnk-plano:hover{background:#e6f1fb}
+.plano-box{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#fafafa;border:1px solid #eee;
+  border-radius:8px;padding:9px 11px;min-height:42px}
 
 /* ── CALENDARIO ── */
 .cal-wrap{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px}
@@ -122,13 +127,14 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .calendario .celda.hoy .numero{color:#111}
 .cal-ev{font-size:10.5px;line-height:1.3;padding:3px 6px;border-radius:6px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;min-width:0;max-width:100%}
 .cal-ev:hover{filter:brightness(.96)}
-.cal-ev.desm{background:#fef5e7;color:#9c6a10;border-left:3px solid #e67e22}
-.cal-ev.mont{background:#e8f8f0;color:#1a7a45;border-left:3px solid #219150}
-.cal-ev.hecho{opacity:.5;text-decoration:line-through}
+.cal-ev.est-pend{background:#f1efe8;color:#5f5e5a;border-left:3px solid #9a978e}
+.cal-ev.est-proc{background:#e6f1fb;color:#185fa5;border-left:3px solid #185fa5}
+.cal-ev.est-comp{background:#e8f8f0;color:#1a7a45;border-left:3px solid #219150}
+.cal-ev .ev-tipo{font-weight:700;opacity:.7;margin-right:3px}
 .cal-full{display:contents}
 .cal-dots{display:none}
 .cal-punto{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto}
-.cal-punto.desm{background:#e67e22}.cal-punto.mont{background:#219150}
+.cal-punto.est-pend{background:#9a978e}.cal-punto.est-proc{background:#185fa5}.cal-punto.est-comp{background:#219150}
 .cal-leyenda{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#666;align-items:center}
 .cal-leyenda span{display:flex;align-items:center;gap:6px}
 .cal-mas{font-size:9px;font-weight:700;color:#999;line-height:1}
@@ -146,13 +152,13 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .ag-dia.hoy .ag-dow{color:#111}
 .ag-items{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .ag-item{border-left:3px solid #ccc;background:#fafafa;border-radius:0 9px 9px 0;padding:8px 11px;cursor:pointer}
-.ag-item.desm{border-left-color:#e67e22;background:#fef8f1}
-.ag-item.mont{border-left-color:#219150;background:#f1faf5}
-.ag-item.hecho{opacity:.55}
-.ag-item.hecho .ag-equipo{text-decoration:line-through}
+.ag-item.est-pend{border-left-color:#9a978e;background:#f7f6f3}
+.ag-item.est-proc{border-left-color:#185fa5;background:#f2f7fc}
+.ag-item.est-comp{border-left-color:#219150;background:#f1faf5}
 .ag-tipo{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8a8a8a}
-.ag-item.desm .ag-tipo{color:#9c6a10}
-.ag-item.mont .ag-tipo{color:#1a7a45}
+.ag-item.est-pend .ag-tipo{color:#5f5e5a}
+.ag-item.est-proc .ag-tipo{color:#185fa5}
+.ag-item.est-comp .ag-tipo{color:#1a7a45}
 .ag-equipo{font-size:13.5px;font-weight:600;margin-top:2px;line-height:1.3}
 .ag-cli{font-size:12px;color:#777;margin-top:3px;line-height:1.35}
 
@@ -472,8 +478,10 @@ tbody td{padding:10px 14px;vertical-align:middle}
             </div>
             <div class="cal-mes" id="cal-mes-label"></div>
             <div class="cal-leyenda">
-              <span><span class="cal-punto desm"></span> Desmontaje</span>
-              <span><span class="cal-punto mont"></span> Montaje</span>
+              <span><span class="cal-punto est-pend"></span> Pendiente</span>
+              <span><span class="cal-punto est-proc"></span> En proceso</span>
+              <span><span class="cal-punto est-comp"></span> Completado</span>
+              <span style="color:#aaa">D = Desmontaje · M = Montaje</span>
             </div>
           </div>
           <div class="calendario" id="cal-grid"></div>
@@ -684,6 +692,9 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="form-group"><label>Precio unitario (CLP)</label><input id="mp-prc" type="number" min="0" placeholder="0"></div>
       <div class="form-group full"><label>Notas</label>
         <textarea id="mp-not" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Observaciones…"></textarea>
+      </div>
+      <div class="form-group full"><label>Plano de la pieza (PDF)</label>
+        <div class="plano-box" id="mp-plano-box"></div>
       </div>
     </div>
     <div class="modal-err" id="mp-err"></div>
@@ -986,6 +997,19 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL PLANO DE LA PIEZA ════ -->
+<div class="overlay" id="mo-plano">
+  <div class="modal" style="max-width:460px">
+    <h2 id="pl-title">Plano de la pieza</h2>
+    <div id="pl-sub" style="font-size:13px;color:#888;margin:-6px 0 12px"></div>
+    <div class="plano-box" id="pl-info"></div>
+    <input type="file" id="pl-file" accept="application/pdf,.pdf" style="display:none" onchange="subirPlano(event)">
+    <div style="font-size:11.5px;color:#aaa;margin-top:9px">Solo archivos PDF, hasta 5 MB.</div>
+    <div class="modal-err" id="pl-err"></div>
+    <div class="modal-actions" id="pl-actions"></div>
+  </div>
+</div>
+
 <!-- ════ MODAL VISTA PREVIA PDF (GUÍA) ════ -->
 <div class="overlay" id="mo-pdf">
   <div class="modal" style="max-width:940px;width:94vw;height:92vh;max-height:92vh;padding:0;display:flex;flex-direction:column;overflow:hidden">
@@ -1022,6 +1046,7 @@ let backendVersion = '?';
 let CONFIG = {};
 let CLIENTES = [];
 let CRONO = [];
+let PLANOS = {};        // metadatos por id de pieza: {nombre,size,fecha}
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
@@ -1045,7 +1070,7 @@ function fbSetList(type, arr){
 
 /* Lee las colecciones en paralelo (~200ms). No descarga el historial de guías. */
 async function apiGet(){
-  const paths = ['users','inventory','insumos','config','clientes','cronograma'];
+  const paths = ['users','inventory','insumos','config','clientes','cronograma','planos'];
   const res = await Promise.all(paths.map(p =>
     fetch(`${FB_URL}/${p}.json`).then(r=>{
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1058,6 +1083,7 @@ async function apiGet(){
   CONFIG   = res[3] || {};
   CLIENTES = toArr(res[4]);
   CRONO    = toArr(res[5]);
+  PLANOS   = res[6] || {};   // solo metadatos; el PDF se descarga al abrirlo
   insumosReady = true;
   backendVersion = 'firebase';
 }
@@ -1243,7 +1269,7 @@ function renderTable(){
   empty.style.display='none';
   tbody.innerHTML=f.map(d=>`<tr>
     <td><code style="font-size:12px;color:#666">${d.codigo}</code></td>
-    <td><strong>${d.nombre}</strong><br><small style="color:#aaa">${d.categoria}</small></td>
+    <td><strong>${d.nombre}</strong>${planoBtnInline(d.id)}<br><small style="color:#aaa">${d.categoria}</small></td>
     <td style="color:#666;font-size:13px">${d.modelo||'—'}</td>
     <td><span class="tag-inox">${d.material}</span></td>
     <td class="dimcell">${[d.d1,d.d2,d.d3].filter(Boolean).join(' / ')||'—'}</td>
@@ -1282,6 +1308,7 @@ function renderAdminTable(){
     <td style="white-space:nowrap">
       <button class="btn btn-in btn-sm" onclick="openMov('piece',${d.id},'in')">＋ Ingreso</button>
       <button class="btn btn-out btn-sm" style="margin-left:3px" onclick="openMov('piece',${d.id},'out')">－ Salida</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:3px" title="${planoDe(d.id)?'Ver / cambiar plano':'Subir plano PDF'}" onclick="openPlanoModal(${d.id})">${planoDe(d.id)?'📄':'📎'}</button>
       <button class="btn btn-outline btn-sm" style="margin-left:3px" onclick="openPieceModal(${d.id})">✏</button>
       <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="deletePiece(${d.id})">✕</button>
     </td>
@@ -1317,6 +1344,7 @@ function openPieceModal(id=null){
     document.getElementById('mp-cat').value='Piñón';   /* antes 'Tubería': no existe en la lista y el campo quedaba vacío */
     document.getElementById('mp-uni').value='unidades';
   }
+  renderPlanoBox();
   document.getElementById('mo-pieza').classList.add('open');
 }
 
@@ -1353,8 +1381,169 @@ async function deletePiece(id){
   const d=getInv().find(x=>x.id===id);
   if(!d)return;
   if(!confirm(`¿Eliminar "${d.nombre}" (${d.codigo})? Esta acción no se puede deshacer.`))return;
-  try{ await apiPost({type:'piece', action:'delete', id}); renderAdminTable(); renderStats(); }
+  try{
+    await apiPost({type:'piece', action:'delete', id});
+    if(planoDe(id)) await borrarPlanoDe(id);
+    renderAdminTable(); renderStats();
+  }
   catch(e){ alert('Error al eliminar: '+e.message); }
+}
+
+/* ═══════════════ PLANOS EN PDF POR PIEZA ═══════════════
+   El PDF se guarda en Firebase como data URL en `planosData/{idPieza}`.
+   En `planos/{idPieza}` queda solo el metadato (nombre, peso, fecha): eso es lo
+   que baja apiGet(), así la carga inicial sigue siendo liviana y el PDF se
+   descarga recién cuando alguien lo abre. ═══════════════════════════════════ */
+const PLANO_MAX = 5 * 1024 * 1024;      // 5 MB
+let planoPieceId = null;
+const PLANO_CACHE = {};                  // data URLs ya descargadas en esta sesión
+
+function planoDe(id){ const p = PLANOS && PLANOS[id]; return (p && p.nombre) ? p : null; }
+function pesoTxt(b){
+  b = Number(b) || 0;
+  return b >= 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(b/1024))+' KB';
+}
+function planoBtnInline(id){
+  return planoDe(id) ? ` <button class="lnk-plano" onclick="verPlano(${id})" title="Ver plano en PDF">📄 Plano</button>` : '';
+}
+function dataUrlABlob(du){
+  const partes = String(du).split(',');
+  const mime = (partes[0].match(/:(.*?);/) || [null,'application/pdf'])[1];
+  const bin = atob(partes[1] || '');
+  const buf = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
+  return new Blob([buf], {type:mime});
+}
+
+/* Recuadro dentro del modal de la pieza */
+function renderPlanoBox(){
+  const box = document.getElementById('mp-plano-box');
+  if(!box) return;
+  if(!editPieceId){
+    box.innerHTML = '<span style="color:#aaa;font-size:12.5px">Guarda la pieza y vuelve a abrirla para adjuntar su plano en PDF.</span>';
+    return;
+  }
+  const pl = planoDe(editPieceId);
+  box.innerHTML = pl
+    ? `<span style="font-size:13px;flex:1;min-width:120px">📄 <strong>${pl.nombre}</strong> <span style="color:#999">· ${pesoTxt(pl.size)}</span></span>
+       <button type="button" class="btn btn-outline btn-sm" onclick="verPlano(${editPieceId})">Ver</button>
+       <button type="button" class="btn btn-outline btn-sm" onclick="openPlanoModal(${editPieceId})">Cambiar</button>`
+    : `<span style="color:#999;font-size:13px;flex:1;min-width:120px">Sin plano adjunto.</span>
+       <button type="button" class="btn btn-outline btn-sm" onclick="openPlanoModal(${editPieceId})">＋ Subir PDF</button>`;
+}
+
+function openPlanoModal(id){
+  const d = getInv().find(x=>Number(x.id)===Number(id));
+  if(!d) return;
+  planoPieceId = Number(id);
+  document.getElementById('pl-title').textContent = 'Plano de la pieza';
+  document.getElementById('pl-sub').textContent = `${d.codigo} · ${d.nombre}`;
+  document.getElementById('pl-err').textContent = '';
+  renderPlanoModal();
+  document.getElementById('mo-plano').classList.add('open');
+}
+
+function renderPlanoModal(){
+  const id = planoPieceId;
+  const pl = planoDe(id);
+  const info = document.getElementById('pl-info');
+  const acc  = document.getElementById('pl-actions');
+  if(!info || !acc) return;
+  info.innerHTML = pl
+    ? `<span style="font-size:13px;flex:1;min-width:120px">📄 <strong>${pl.nombre}</strong><br>
+         <span style="color:#999;font-size:12px">${pesoTxt(pl.size)} · subido el ${fmtFecha((pl.fecha||'').slice(0,10))}${pl.por?' por '+pl.por:''}</span></span>`
+    : '<span style="color:#999;font-size:13px">Esta pieza todavía no tiene plano adjunto.</span>';
+  const admin = esAdmin();
+  acc.innerHTML =
+    (pl ? `<button class="btn btn-outline" onclick="verPlano(${id})">👁 Ver</button>` : '') +
+    (admin ? `<button class="btn btn-primary" onclick="pedirArchivoPlano()">${pl?'⇅ Reemplazar':'＋ Subir PDF'}</button>` : '') +
+    (admin && pl ? `<button class="btn btn-danger" onclick="quitarPlano()">✕ Quitar</button>` : '') +
+    `<button class="btn btn-outline" onclick="closeMo('mo-plano')">Cerrar</button>`;
+}
+
+function pedirArchivoPlano(){ document.getElementById('pl-file').click(); }
+
+async function subirPlano(ev){
+  const input = ev.target;
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  const err = document.getElementById('pl-err');
+  err.textContent = '';
+  if(!esAdmin()){ err.textContent = 'Solo los administradores pueden subir planos.'; return; }
+  if(!planoPieceId){ err.textContent = 'No se identificó la pieza.'; return; }
+  if(file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)){ err.textContent = 'El archivo debe ser un PDF.'; return; }
+  if(file.size > PLANO_MAX){ err.textContent = `El PDF pesa ${pesoTxt(file.size)} y el máximo es ${pesoTxt(PLANO_MAX)}.`; return; }
+  const id = planoPieceId;
+  showSync('Subiendo plano…');
+  try{
+    const dataUrl = await new Promise((res,rej)=>{
+      const fr = new FileReader();
+      fr.onload = ()=>res(fr.result);
+      fr.onerror = ()=>rej(new Error('No se pudo leer el archivo.'));
+      fr.readAsDataURL(file);
+    });
+    let r = await fetch(`${FB_URL}/planosData/${id}.json`, {method:'PUT', body:JSON.stringify(dataUrl)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const meta = {nombre:file.name, size:file.size, fecha:new Date().toISOString(), por:(currentUser&&currentUser.username)||''};
+    r = await fetch(`${FB_URL}/planos/${id}.json`, {method:'PUT', body:JSON.stringify(meta)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    PLANOS[id] = meta;
+    PLANO_CACHE[id] = dataUrl;
+    renderPlanoModal(); renderPlanoBox(); renderAdminTable(); renderTable();
+  }catch(e){
+    err.textContent = 'Error al subir el plano: '+e.message;
+  }finally{ hideSync(); }
+}
+
+async function verPlano(id){
+  const meta = planoDe(id);
+  if(!meta){ alert('Esta pieza no tiene plano adjunto.'); return; }
+  showSync('Abriendo plano…');
+  try{
+    let du = PLANO_CACHE[id];
+    if(!du){
+      const r = await fetch(`${FB_URL}/planosData/${id}.json`);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      du = await r.json();
+      if(!du) throw new Error('el archivo ya no está disponible.');
+      PLANO_CACHE[id] = du;
+    }
+    const d = getInv().find(x=>Number(x.id)===Number(id)) || {};
+    if(pdfActual && pdfActual.url) URL.revokeObjectURL(pdfActual.url);
+    const url = URL.createObjectURL(dataUrlABlob(du));
+    pdfActual = {doc:null, url, nombre: meta.nombre || ((d.codigo||'plano')+'.pdf')};
+    document.getElementById('pdf-title').textContent = 'Plano · '+(d.codigo||'')+(d.nombre?' · '+d.nombre:'');
+    document.getElementById('pdf-frame').src = url;
+    document.getElementById('mo-pdf').classList.add('open');
+  }catch(e){
+    alert('No se pudo abrir el plano: '+e.message);
+  }finally{ hideSync(); }
+}
+
+/* Borra el PDF y su metadato (se usa también al eliminar la pieza) */
+async function borrarPlanoDe(id){
+  await fetch(`${FB_URL}/planosData/${id}.json`, {method:'DELETE'});
+  await fetch(`${FB_URL}/planos/${id}.json`, {method:'DELETE'});
+  delete PLANOS[id];
+  delete PLANO_CACHE[id];
+}
+
+async function quitarPlano(){
+  if(!esAdmin()){ return; }
+  const id = planoPieceId;
+  const pl = planoDe(id);
+  if(!pl) return;
+  if(!confirm(`¿Quitar el plano "${pl.nombre}"? Esta acción no se puede deshacer.`)) return;
+  const err = document.getElementById('pl-err');
+  err.textContent = '';
+  showSync('Eliminando…');
+  try{
+    await borrarPlanoDe(id);
+    renderPlanoModal(); renderPlanoBox(); renderAdminTable(); renderTable();
+  }catch(e){
+    err.textContent = 'Error al quitar el plano: '+e.message;
+  }finally{ hideSync(); }
 }
 
 /* ═══ USER TABLE ═══ */
@@ -1992,7 +2181,13 @@ function verGuia(numero){
 }
 
 function descargarGuiaActual(){
-  if(pdfActual && pdfActual.doc) pdfActual.doc.save(pdfActual.nombre);
+  if(!pdfActual) return;
+  if(pdfActual.doc){ pdfActual.doc.save(pdfActual.nombre); return; }
+  if(pdfActual.url){                       // planos: el PDF ya viene como blob
+    const a=document.createElement('a');
+    a.href=pdfActual.url; a.download=pdfActual.nombre||'plano.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
 }
 
 function cerrarPdf(){
@@ -2022,6 +2217,13 @@ function estadoBtn(t){
   return `<button onclick="openEstadoMenu(event,${t.id})" class="badge"
     style="${estadoStyle(e)};border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px">
     ${e} <span style="font-size:9px">▼</span></button>`;
+}
+/* Clave corta del estado, usada por el calendario para colorear igual que la tabla */
+function estadoKey(e){
+  return (e==='Completado'||e==='Terminado') ? 'comp' : (e==='En proceso' ? 'proc' : 'pend');
+}
+function estadoColor(e){
+  return {comp:'#219150', proc:'#185fa5', pend:'#9a978e'}[estadoKey(e)];
 }
 function estadoDot(e){
   const c={'Completado':'#1a7a45','En proceso':'#185fa5','Pendiente':'#999'}[e]||'#999';
@@ -2188,11 +2390,11 @@ function _hoyISO(){ return _iso(new Date()); }
 function calEventos(){
   const ev={};
   croFiltered().forEach(t=>{
-    const hecho=(t.estado==='Completado'||t.estado==='Terminado');
+    const est=estadoKey(t.estado);
     diasEntre(t.desmontaje,t.desmontajeHasta).forEach(iso=>
-      (ev[iso]=ev[iso]||[]).push({t,tipo:'desm',hecho}));
+      (ev[iso]=ev[iso]||[]).push({t,tipo:'desm',est}));
     diasEntre(t.montaje,t.montajeHasta).forEach(iso=>
-      (ev[iso]=ev[iso]||[]).push({t,tipo:'mont',hecho}));
+      (ev[iso]=ev[iso]||[]).push({t,tipo:'mont',est}));
   });
   return ev;
 }
@@ -2214,12 +2416,12 @@ function renderCalendario(){
     const del=porDia[iso]||[];
     const barras=del.map(e=>{
       const et=e.tipo==='desm'?'Desmontaje':'Montaje';
-      const tit=`${et} · ${e.t.equipo} · ${e.t.cliente}${e.t.responsable?' · '+e.t.responsable:''}`;
-      return `<div class="cal-ev ${e.tipo}${e.hecho?' hecho':''}" data-id="${e.t.id}" title="${String(tit).replace(/"/g,'&quot;')}">${e.t.equipo}</div>`;
+      const tit=`${et} · ${e.t.equipo} · ${e.t.cliente}${e.t.responsable?' · '+e.t.responsable:''} · ${e.t.estado||'Pendiente'}`;
+      return `<div class="cal-ev est-${e.est}" data-id="${e.t.id}" title="${String(tit).replace(/"/g,'&quot;')}"><span class="ev-tipo">${e.tipo==='desm'?'D':'M'}</span>${e.t.equipo}</div>`;
     }).join('');
     /* En móvil la celda es chica: como máximo 4 puntos y el resto se resume en "+n" */
     const MAX_PUNTOS=4;
-    const puntos=del.slice(0,MAX_PUNTOS).map(e=>`<span class="cal-punto ${e.tipo}"></span>`).join('')
+    const puntos=del.slice(0,MAX_PUNTOS).map(e=>`<span class="cal-punto est-${e.est}"></span>`).join('')
       + (del.length>MAX_PUNTOS?`<span class="cal-mas">+${del.length-MAX_PUNTOS}</span>`:'');
     html+=`<div class="celda${fuera?' fuera':''}${iso===_hoyISO()?' hoy':''}${del.length?' con-ev':''}" data-fecha="${iso}">
       <div class="numero">${d.getDate()}</div>
@@ -2267,7 +2469,7 @@ function renderCalAgenda(porDia){
         <span class="ag-dow">${DIAS_CORTO[d.getDay()]}</span>
       </div>
       <div class="ag-items">${porDia[iso].map(e=>`
-        <div class="ag-item ${e.tipo}${e.hecho?' hecho':''}" data-fecha="${iso}">
+        <div class="ag-item est-${e.est}" data-fecha="${iso}">
           <div class="ag-tipo">${e.tipo==='desm'?'Desmontaje':'Montaje'}</div>
           <div class="ag-equipo">${e.t.equipo||'—'}</div>
           <div class="ag-cli">${e.t.cliente||''}${e.t.cantidad?' · '+e.t.cantidad+' u.':''}${e.t.responsable?' · '+e.t.responsable:''}</div>
@@ -2286,7 +2488,7 @@ function abrirDiaCal(iso, lista){
   document.getElementById('cd-title').textContent='Trabajos del '+fmtFecha(iso);
   document.getElementById('cd-body').innerHTML=lista.map(e=>{
     const et=e.tipo==='desm'?'Desmontaje':'Montaje';
-    const col=e.tipo==='desm'?'#e67e22':'#219150';
+    const col=estadoColor(e.t.estado);
     return `<div style="border-left:3px solid ${col};padding:8px 12px;margin-bottom:8px;background:#fafafa;border-radius:0 8px 8px 0">
       <div style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.4px">${et}</div>
       <div style="font-weight:600;margin-top:2px">${e.t.equipo}</div>
