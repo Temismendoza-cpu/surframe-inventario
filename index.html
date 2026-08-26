@@ -113,6 +113,15 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .lnk-plano:hover{background:#e6f1fb}
 .plano-box{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#fafafa;border:1px solid #eee;
   border-radius:8px;padding:9px 11px;min-height:42px}
+.fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.foto-item{position:relative;border:1px solid #eee;border-radius:9px;overflow:hidden;background:#fafafa;aspect-ratio:4/3}
+.foto-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.foto-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:6px;
+  width:22px;height:22px;cursor:pointer;font-size:11px;line-height:1;padding:0}
+.foto-del:hover{background:rgba(192,57,43,.9)}
+.foto-pie{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:9.5px;
+  padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.fotos-vacio{color:#bbb;font-size:13px;padding:10px 0}
 
 /* ── CALENDARIO ── */
 .cal-wrap{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px}
@@ -628,7 +637,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <table>
             <thead><tr>
               <th>N° guía</th><th>Fecha</th><th>Cliente</th>
-              <th>Emitida por</th><th>Productos</th><th>PDF</th>
+              <th>Emitida por</th><th>Productos</th><th>Acciones</th>
             </tr></thead>
             <tbody id="gui-tbl"></tbody>
           </table>
@@ -749,6 +758,16 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <button class="btn btn-in" onclick="addGuiaItem()">＋ Agregar</button>
       </div>
       <div id="gd-lista" style="margin-top:12px"></div>
+    </div>
+
+    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Fotos de respaldo (opcional)</label>
+      <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('gd-fotos-file').click()">📷 Agregar fotos</button>
+        <span style="font-size:11.5px;color:#aaa">Se comprimen automáticamente al subirlas.</span>
+      </div>
+      <input type="file" id="gd-fotos-file" accept="image/*" multiple style="display:none" onchange="agregarFotosGuia(event)">
+      <div id="gd-fotos" class="fotos-grid" style="margin-top:10px"></div>
     </div>
 
     <div class="modal-err" id="gd-err"></div>
@@ -994,6 +1013,32 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-csv')">Cerrar</button>
     </div>
+  </div>
+</div>
+
+<!-- ════ MODAL FOTOS DE RESPALDO DE UNA GUÍA ════ -->
+<div class="overlay" id="mo-fotos">
+  <div class="modal" style="max-width:640px">
+    <h2 id="fg-title">Fotos de respaldo</h2>
+    <div id="fg-sub" style="font-size:13px;color:#888;margin:-6px 0 12px"></div>
+    <div id="fg-grid" class="fotos-grid"></div>
+    <input type="file" id="fg-file" accept="image/*" multiple style="display:none" onchange="subirFotosGuia(event)">
+    <div class="modal-err" id="fg-err"></div>
+    <div class="modal-actions" id="fg-actions"></div>
+  </div>
+</div>
+
+<!-- ════ VISOR DE FOTO ════ -->
+<div class="overlay" id="mo-foto">
+  <div class="modal" style="max-width:920px;width:94vw;padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid #eee">
+      <h2 id="fv-title" style="font-size:14px;font-weight:700;margin:0;padding:0;border:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Foto</h2>
+      <div style="display:flex;gap:8px;flex:0 0 auto">
+        <button class="btn btn-primary btn-sm" onclick="descargarFotoActual()">⬇ Descargar</button>
+        <button class="btn btn-outline btn-sm" onclick="closeMo('mo-foto')">✕ Cerrar</button>
+      </div>
+    </div>
+    <img id="fv-img" alt="Foto de respaldo" style="width:100%;max-height:74vh;object-fit:contain;background:#111;display:block">
   </div>
 </div>
 
@@ -1832,6 +1877,8 @@ function openGuiaModal(){
   document.getElementById('gd-cliente').value='';
   filtrarPiezasGuia();
   renderGuiaLista();
+  guiaFotosPend=[];
+  renderFotosPend();
   document.getElementById('mo-guia').classList.add('open');
 }
 
@@ -1876,6 +1923,244 @@ function renderGuiaLista(){
       <td style="padding:6px 8px;text-align:center;vertical-align:top"><strong>${i.cantidad}</strong> <span style="color:#aaa;font-size:11px">${i.unit}</span></td>
       <td style="padding:6px 8px;text-align:right"><button class="btn btn-danger btn-sm" onclick="removeGuiaItem(${i.id})">✕</button></td>
     </tr>`).join('')}</tbody></table>`;
+}
+
+/* ═══════════════ FOTOS DE RESPALDO DE LAS GUÍAS ═══════════════
+   Cada foto se comprime en el navegador (JPEG, lado mayor 2000 px) antes de
+   subirla, así una foto de teléfono de 4-6 MB queda en unos cientos de KB sin
+   perder detalle visible. Se guardan en `guiasFotos/{numero}/{idFoto}` y en el
+   registro de la guía solo queda el contador `fotos`, para que la lista de
+   guías siga siendo liviana. ═════════════════════════════════════════════ */
+const FOTO_LADO_MAX   = 2000;    // px del lado mayor
+const FOTO_PESO_META  = 900*1024;// objetivo por foto tras comprimir
+const FOTO_MAX_POR_GUIA = 20;
+let guiaFotosPend = [];          // fotos aún no subidas (guía en edición)
+let fotosGuiaNum  = null;        // guía abierta en el modal de fotos
+let fotoActual    = null;        // {nombre, data} en el visor
+const FOTOS_CACHE = {};          // {numero: {idFoto: foto}}
+
+function nuevoFotoId(){ return 'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* Comprime a JPEG bajando la calidad solo lo necesario para llegar al peso objetivo */
+async function comprimirImagen(file){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res,rej)=>{
+      const im = new Image();
+      im.onload = ()=>res(im);
+      im.onerror = ()=>rej(new Error('no se pudo leer la imagen'));
+      im.src = url;
+    });
+    const dibujar = (lado)=>{
+      const esc = Math.min(1, lado/Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth*esc));
+      const h = Math.max(1, Math.round(img.naturalHeight*esc));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d');
+      cx.imageSmoothingEnabled = true;
+      cx.imageSmoothingQuality = 'high';
+      cx.fillStyle = '#fff';                 // las PNG con transparencia quedan sobre blanco
+      cx.fillRect(0,0,w,h);
+      cx.drawImage(img, 0, 0, w, h);
+      return {cv, w, h};
+    };
+    /* Primero se mantiene la resolución y se ajusta la calidad; recién si sigue
+       muy pesada se reduce el tamaño. */
+    const intentos = [
+      [FOTO_LADO_MAX, 0.88], [FOTO_LADO_MAX, 0.80], [FOTO_LADO_MAX, 0.72],
+      [1600, 0.78], [1280, 0.72]
+    ];
+    let out = null;
+    for(const [lado, q] of intentos){
+      const {cv, w, h} = dibujar(lado);
+      const data = cv.toDataURL('image/jpeg', q);
+      const size = Math.round((data.length - (data.indexOf(',')+1)) * 3/4);
+      out = {data, size, w, h};
+      if(size <= FOTO_PESO_META) break;
+    }
+    return {nombre:file.name, data:out.data, size:out.size, w:out.w, h:out.h, original:file.size};
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/* Lee varios archivos y devuelve solo las imágenes comprimidas */
+async function comprimirVarias(files, avisar){
+  const fotos = [], fallos = [];
+  for(let i=0;i<files.length;i++){
+    const f = files[i];
+    if(!/^image\//.test(f.type)){ fallos.push(f.name+' (no es una imagen)'); continue; }
+    if(avisar) avisar(`Comprimiendo ${i+1} de ${files.length}…`);
+    try{ fotos.push(await comprimirImagen(f)); }
+    catch(e){ fallos.push(f.name+' ('+e.message+')'); }
+  }
+  return {fotos, fallos};
+}
+
+/* ── Fotos de la guía que se está creando ── */
+async function agregarFotosGuia(ev){
+  const input = ev.target;
+  const files = [...(input.files||[])];
+  input.value = '';
+  if(!files.length) return;
+  const err = document.getElementById('gd-err'); err.textContent = '';
+  if(guiaFotosPend.length + files.length > FOTO_MAX_POR_GUIA){
+    err.textContent = `Máximo ${FOTO_MAX_POR_GUIA} fotos por guía.`; return;
+  }
+  showSync('Comprimiendo fotos…');
+  try{
+    const {fotos, fallos} = await comprimirVarias(files, t=>showSync(t));
+    guiaFotosPend = guiaFotosPend.concat(fotos);
+    if(fallos.length) err.textContent = 'No se pudieron agregar: '+fallos.join(', ');
+    renderFotosPend();
+  } finally { hideSync(); }
+}
+
+function renderFotosPend(){
+  const c = document.getElementById('gd-fotos');
+  if(!c) return;
+  c.innerHTML = guiaFotosPend.length
+    ? guiaFotosPend.map((f,i)=>`<div class="foto-item">
+        <img src="${f.data}" alt="${f.nombre}" onclick="verFotoPend(${i})">
+        <button type="button" class="foto-del" title="Quitar" onclick="quitarFotoPend(${i})">✕</button>
+        <div class="foto-pie">${pesoTxt(f.size)}</div>
+      </div>`).join('')
+    : '<div class="fotos-vacio">Sin fotos adjuntas.</div>';
+}
+function quitarFotoPend(i){ guiaFotosPend.splice(i,1); renderFotosPend(); }
+function verFotoPend(i){ const f=guiaFotosPend[i]; if(f) abrirVisorFoto(f); }
+
+/* ── Galería de una guía ya emitida ── */
+function nFotosGuia(g){ return Number(g && g.fotos) || 0; }
+
+async function openFotosGuia(numero){
+  const g = GUIAS.find(x=>String(x.numero)===String(numero));
+  if(!g) return;
+  fotosGuiaNum = String(numero);
+  document.getElementById('fg-title').textContent = 'Fotos de respaldo';
+  document.getElementById('fg-sub').textContent = `Guía ${g.numero} · ${g.cliente}`;
+  document.getElementById('fg-err').textContent = '';
+  document.getElementById('fg-grid').innerHTML = '<div class="fotos-vacio">Cargando…</div>';
+  renderFotosAcciones();
+  document.getElementById('mo-fotos').classList.add('open');
+  try{
+    if(!FOTOS_CACHE[fotosGuiaNum]){
+      const r = await fetch(`${FB_URL}/guiasFotos/${fotosGuiaNum}.json`);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      FOTOS_CACHE[fotosGuiaNum] = (await r.json()) || {};
+    }
+    renderFotosModal();
+  }catch(e){
+    document.getElementById('fg-grid').innerHTML = '';
+    document.getElementById('fg-err').textContent = 'No se pudieron cargar las fotos: '+e.message;
+  }
+}
+
+function renderFotosModal(){
+  const grid = document.getElementById('fg-grid');
+  if(!grid) return;
+  const fotos = FOTOS_CACHE[fotosGuiaNum] || {};
+  const ids = Object.keys(fotos);
+  grid.innerHTML = ids.length
+    ? ids.map(id=>{
+        const f = fotos[id];
+        return `<div class="foto-item">
+          <img src="${f.data}" alt="${f.nombre||'foto'}" onclick="verFotoGuia('${id}')">
+          ${esAdmin()?`<button type="button" class="foto-del" title="Eliminar" onclick="borrarFotoGuia('${id}')">✕</button>`:''}
+          <div class="foto-pie">${pesoTxt(f.size)}</div>
+        </div>`;
+      }).join('')
+    : '<div class="fotos-vacio">Esta guía no tiene fotos de respaldo.</div>';
+  renderFotosAcciones();
+}
+
+function renderFotosAcciones(){
+  const acc = document.getElementById('fg-actions');
+  if(!acc) return;
+  acc.innerHTML =
+    (esAdmin() ? `<button class="btn btn-primary" onclick="document.getElementById('fg-file').click()">📷 Agregar fotos</button>` : '') +
+    `<button class="btn btn-outline" onclick="closeMo('mo-fotos')">Cerrar</button>`;
+}
+
+async function subirFotosGuia(ev){
+  const input = ev.target;
+  const files = [...(input.files||[])];
+  input.value = '';
+  if(!files.length || !fotosGuiaNum) return;
+  const err = document.getElementById('fg-err'); err.textContent = '';
+  if(!esAdmin()){ err.textContent = 'Solo los administradores pueden subir fotos.'; return; }
+  const actuales = Object.keys(FOTOS_CACHE[fotosGuiaNum]||{}).length;
+  if(actuales + files.length > FOTO_MAX_POR_GUIA){
+    err.textContent = `Máximo ${FOTO_MAX_POR_GUIA} fotos por guía.`; return;
+  }
+  showSync('Comprimiendo fotos…');
+  try{
+    const {fotos, fallos} = await comprimirVarias(files, t=>showSync(t));
+    if(fallos.length) err.textContent = 'No se pudieron agregar: '+fallos.join(', ');
+    if(!fotos.length) return;
+    showSync('Subiendo fotos…');
+    const lote = {};
+    fotos.forEach(f=>{ lote[nuevoFotoId()] = fotoRegistro(f); });
+    const r = await fetch(`${FB_URL}/guiasFotos/${fotosGuiaNum}.json`, {method:'PATCH', body:JSON.stringify(lote)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    FOTOS_CACHE[fotosGuiaNum] = {...(FOTOS_CACHE[fotosGuiaNum]||{}), ...lote};
+    await guardarContadorFotos(fotosGuiaNum, Object.keys(FOTOS_CACHE[fotosGuiaNum]).length);
+    renderFotosModal();
+  }catch(e){
+    err.textContent = 'Error al subir las fotos: '+e.message;
+  } finally { hideSync(); }
+}
+
+function fotoRegistro(f){
+  return {nombre:f.nombre, data:f.data, size:f.size, w:f.w, h:f.h,
+          fecha:new Date().toISOString(), por:(currentUser&&currentUser.name)||''};
+}
+
+/* Guarda el contador en el registro de la guía (la lista lo lee sin bajar las fotos) */
+async function guardarContadorFotos(numero, n){
+  await fetch(`${FB_URL}/guias/${numero}.json`, {method:'PATCH', body:JSON.stringify({fotos:n})});
+  const g = GUIAS.find(x=>String(x.numero)===String(numero));
+  if(g) g.fotos = n;
+  renderGuiasTable();
+}
+
+async function borrarFotoGuia(id){
+  if(!esAdmin() || !fotosGuiaNum) return;
+  if(!confirm('¿Eliminar esta foto? Esta acción no se puede deshacer.')) return;
+  const err = document.getElementById('fg-err'); err.textContent = '';
+  showSync('Eliminando…');
+  try{
+    const r = await fetch(`${FB_URL}/guiasFotos/${fotosGuiaNum}/${id}.json`, {method:'DELETE'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    delete FOTOS_CACHE[fotosGuiaNum][id];
+    await guardarContadorFotos(fotosGuiaNum, Object.keys(FOTOS_CACHE[fotosGuiaNum]).length);
+    renderFotosModal();
+  }catch(e){
+    err.textContent = 'Error al eliminar la foto: '+e.message;
+  } finally { hideSync(); }
+}
+
+function verFotoGuia(id){
+  const f = (FOTOS_CACHE[fotosGuiaNum]||{})[id];
+  if(f) abrirVisorFoto(f);
+}
+
+function abrirVisorFoto(f){
+  fotoActual = f;
+  document.getElementById('fv-title').textContent =
+    (f.nombre||'Foto') + (f.w?` · ${f.w}×${f.h} px`:'') + (f.size?` · ${pesoTxt(f.size)}`:'');
+  document.getElementById('fv-img').src = f.data;
+  document.getElementById('mo-foto').classList.add('open');
+}
+
+function descargarFotoActual(){
+  if(!fotoActual) return;
+  /* Se pasa por blob: Safari bloquea la descarga directa desde una data URL */
+  const url = URL.createObjectURL(dataUrlABlob(fotoActual.data));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (fotoActual.nombre||'foto').replace(/\.[^.]+$/,'') + '.jpg';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 
 /* ═══ LOGO DE LA EMPRESA (pestaña Empresa) ═══ */
@@ -1960,6 +2245,7 @@ function renderGuiasTable(){
       <td style="white-space:nowrap">
         <button class="btn btn-outline btn-sm" onclick="verGuia('${g.numero}')">👁 Ver</button>
         <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="descargarGuia('${g.numero}')">📄 Descargar</button>
+        <button class="btn btn-outline btn-sm" style="margin-left:4px" title="Fotos de respaldo" onclick="openFotosGuia('${g.numero}')">📷${nFotosGuia(g)?' '+nFotosGuia(g):''}</button>
       </td>
     </tr>`;
   }).join('');
@@ -2072,6 +2358,7 @@ async function generarGuia(){
                     emitidoPor:currentUser.name,
                     items:guiaItems.map(i=>({codigo:i.codigo,nombre:i.nombre,modelo:i.modelo||'',
                                              dims:i.dims||'',cantidad:i.cantidad,unit:i.unit})),
+                    fotos:0,
                     creado:new Date().toISOString()};
     await fetch(`${FB_URL}/guias/${numero}.json`,{method:'PUT',body:JSON.stringify(registro)});
     const sig=(Number(CONFIG.nextGuia)||1)+1;
@@ -2079,6 +2366,25 @@ async function generarGuia(){
     CONFIG.nextGuia=sig;
     GUIAS.push(registro);
     renderGuiasTable();
+    /* 2b) Fotos de respaldo. Van después del registro: si fallan, la guía ya
+       quedó guardada y las fotos se pueden agregar desde la pestaña Guías. */
+    if(guiaFotosPend.length){
+      try{
+        showSync('Subiendo fotos…');
+        const lote={};
+        guiaFotosPend.forEach(f=>{ lote[nuevoFotoId()]=fotoRegistro(f); });
+        const rf=await fetch(`${FB_URL}/guiasFotos/${numero}.json`,{method:'PUT',body:JSON.stringify(lote)});
+        if(!rf.ok) throw new Error('HTTP '+rf.status);
+        FOTOS_CACHE[numero]=lote;
+        await guardarContadorFotos(numero, guiaFotosPend.length);
+        guiaFotosPend=[];
+        hideSync();
+      }catch(eF){
+        hideSync();
+        alert('La guía '+numero+' se generó correctamente, pero las fotos no se pudieron subir ('+eF.message+
+              ').\nPuedes agregarlas desde Admin → Guías con el botón 📷.');
+      }
+    }
     // 3) PDF
     crearPDF(registro);
     closeMo('mo-guia');
