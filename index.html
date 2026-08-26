@@ -122,6 +122,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .foto-pie{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:9.5px;
   padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .fotos-vacio{color:#bbb;font-size:13px;padding:10px 0}
+.up{text-transform:uppercase}
+.up::placeholder{text-transform:none}
 
 /* ── CALENDARIO ── */
 .cal-wrap{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:14px}
@@ -589,6 +591,42 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
       <div class="atab-panel" id="atab-emp">
         <div class="section-hd">
+          <h3>Datos del emisor</h3>
+        </div>
+        <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:1.25rem;margin-bottom:2rem">
+          <div class="form-grid">
+            <div class="form-group full"><label>Razón social</label><input id="em-razon" placeholder="Ej: Surframe SpA"></div>
+            <div class="form-group"><label>RUT</label><input id="em-rut" placeholder="Ej: 76.123.456-7"></div>
+            <div class="form-group"><label>Giro</label><input id="em-giro" placeholder="Ej: Fabricación de repuestos industriales"></div>
+            <div class="form-group full"><label>Dirección</label><input id="em-dir" placeholder="Ej: Av. Central 100, Santiago"></div>
+            <div class="form-group"><label>Ciudad / Comuna</label><input id="em-ciudad" placeholder="Ej: Santiago"></div>
+            <div class="form-group"><label>Teléfono</label><input id="em-fono" placeholder="Ej: +56 2 2345 6789"></div>
+            <div class="form-group full"><label>Email</label><input id="em-mail" placeholder="Ej: ventas@surframe.cl"></div>
+          </div>
+          <div style="color:#999;font-size:12px;margin-top:10px">Estos datos encabezan todas las guías de despacho en PDF.</div>
+          <div class="modal-err" id="em-err"></div>
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" id="em-save" onclick="guardarEmisor()">Guardar datos</button>
+            <span id="em-ok" style="color:#219150;font-size:12.5px"></span>
+          </div>
+        </div>
+
+        <div class="section-hd">
+          <h3>Choferes y patentes</h3>
+        </div>
+        <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:1.25rem;margin-bottom:2rem">
+          <div id="ch-lista"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0">
+            <input id="ch-nom" placeholder="Nombre del chofer" style="flex:2;min-width:170px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+            <input id="ch-rut" placeholder="RUT" style="flex:1;min-width:120px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+            <input id="ch-pat" placeholder="Patente" class="up" style="flex:1;min-width:110px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+            <button class="btn btn-in" onclick="agregarChofer()">＋ Agregar</button>
+          </div>
+          <div style="color:#999;font-size:12px;margin-top:10px">Los choferes que uses en una guía quedan guardados aquí automáticamente.</div>
+          <div class="modal-err" id="ch-err"></div>
+        </div>
+
+        <div class="section-hd">
           <h3>Logo de la empresa</h3>
         </div>
         <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:1.25rem;margin-bottom:2rem">
@@ -721,6 +759,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
     <div class="form-grid" style="grid-template-columns:1fr">
       <div class="form-group"><label>Nombre / Razón social *</label><input id="mc-nombre" placeholder="Ej: Alimentos del Sur SpA"></div>
       <div class="form-group"><label>RUT</label><input id="mc-rut" placeholder="Ej: 76.543.210-9"></div>
+      <div class="form-group"><label>Giro</label><input id="mc-giro" placeholder="Ej: Elaboración de alimentos"></div>
       <div class="form-group"><label>Dirección</label><input id="mc-dir" placeholder="Ej: Av. Industrial 1234, Puerto Montt"></div>
       <div class="form-group"><label>Contacto (teléfono o email)</label><input id="mc-contacto" placeholder="Ej: +56 9 1234 5678"></div>
     </div>
@@ -741,11 +780,19 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="form-group"><label>Fecha de emisión</label><input id="gd-fecha" type="date"></div>
       <div class="form-group full"><label>Cliente a despachar *</label>
         <div style="display:flex;gap:8px">
-          <select id="gd-cliente" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
+          <select id="gd-cliente" onchange="autoDirEntrega()" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
           <button class="btn btn-outline" onclick="openClienteModal(null,true)" title="Agregar cliente nuevo">+ Nuevo</button>
         </div>
       </div>
-      <div class="form-group full"><label>Emitida por</label><input id="gd-emisor" readonly style="background:#f4f4f4"></div>
+      <div class="form-group full"><label>Dirección de entrega</label><input id="gd-dir" placeholder="Se completa con la dirección del cliente"></div>
+      <div class="form-group"><label>Tipo / motivo de traslado</label>
+        <select id="gd-traslado">
+          <option>Venta</option><option>Entrega de mercadería</option><option>Traslado interno</option>
+          <option>Devolución</option><option>Consignación</option><option>Reparación / servicio</option>
+          <option>Préstamo</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Emitida por</label><input id="gd-emisor" readonly style="background:#f4f4f4"></div>
     </div>
 
     <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
@@ -758,6 +805,20 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <button class="btn btn-in" onclick="addGuiaItem()">＋ Agregar</button>
       </div>
       <div id="gd-lista" style="margin-top:12px"></div>
+    </div>
+
+    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Transporte</label>
+      <div class="form-grid">
+        <div class="form-group full"><label>Chofer guardado</label>
+          <select id="gd-chofer-sel" onchange="aplicarChoferGuia()"></select>
+        </div>
+        <div class="form-group full"><label>Nombre del chofer</label><input id="gd-chofer" placeholder="Ej: Juan Pérez González"></div>
+        <div class="form-group"><label>RUT del chofer</label><input id="gd-chofer-rut" placeholder="Ej: 12.345.678-9"></div>
+        <div class="form-group"><label>Patente del vehículo</label><input id="gd-patente" class="up" placeholder="Ej: XXYY11"></div>
+        <div class="form-group full"><label>Observaciones / referencia (OC, nota)</label><input id="gd-obs" placeholder="Ej: OC-456"></div>
+      </div>
+      <div style="font-size:11.5px;color:#aaa;margin-top:6px">El chofer y la patente quedan guardados en la guía y disponibles para las próximas.</div>
     </div>
 
     <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
@@ -1239,7 +1300,7 @@ function switchAdminTab(t){
   document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('active',i===order[t]));
   ['inv','ins','usr','emp','gui'].forEach(k=>
     document.getElementById('atab-'+k).classList.toggle('active', t===k));
-  if(t==='emp'){ renderLogoPrev(); renderClientesTable(); }
+  if(t==='emp'){ renderLogoPrev(); renderEmisorForm(); renderChoferes(); renderClientesTable(); }
   if(t==='gui'){ cargarGuias(); }
 }
 
@@ -1875,6 +1936,13 @@ function openGuiaModal(){
   document.getElementById('gd-num').value=numGuia();
   llenarClientesGuia();
   document.getElementById('gd-cliente').value='';
+  document.getElementById('gd-dir').value='';
+  document.getElementById('gd-traslado').value='Venta';
+  document.getElementById('gd-chofer').value='';
+  document.getElementById('gd-chofer-rut').value='';
+  document.getElementById('gd-patente').value='';
+  document.getElementById('gd-obs').value='';
+  llenarChoferesGuia();
   filtrarPiezasGuia();
   renderGuiaLista();
   guiaFotosPend=[];
@@ -1897,7 +1965,8 @@ function addGuiaItem(){
   const ex=guiaItems.find(i=>i.id===id);
   if(ex) ex.cantidad+=cant;
   else guiaItems.push({id, codigo:p.codigo, nombre:p.nombre, modelo:p.modelo||'',
-                       dims:dimsOf(p), unit:p.unit||'', cantidad:cant});
+                       dims:dimsOf(p), unit:p.unit||'', cantidad:cant,
+                       precio:Number(p.precio)||0});
   document.getElementById('gd-cant').value='';
   renderGuiaLista();
 }
@@ -1910,19 +1979,29 @@ function renderGuiaLista(){
     c.innerHTML='<div style="color:#bbb;font-size:13px;padding:10px 0">Aún no has agregado productos.</div>';
     return;
   }
+  const conPrecio=guiaItems.some(i=>Number(i.precio)>0);
+  const total=guiaItems.reduce((a,i)=>a+Number(i.precio||0)*Number(i.cantidad||0),0);
   c.innerHTML=`<table style="width:100%;font-size:13px;border-collapse:collapse">
     <thead><tr style="background:#f4f4f4">
       <th style="text-align:left;padding:6px 8px">Código</th>
       <th style="text-align:left;padding:6px 8px">Producto</th>
-      <th style="padding:6px 8px">Cantidad</th><th></th>
+      <th style="padding:6px 8px">Cantidad</th>
+      ${conPrecio?'<th style="padding:6px 8px;text-align:right">P. unit.</th><th style="padding:6px 8px;text-align:right">Total</th>':''}
+      <th></th>
     </tr></thead>
     <tbody>${guiaItems.map(i=>`<tr style="border-bottom:1px solid #f0f0f0">
       <td style="padding:6px 8px;vertical-align:top"><code style="font-size:12px">${i.codigo}</code></td>
       <td style="padding:6px 8px">${i.nombre}
         ${(i.modelo||i.dims)?`<br><small style="color:#aaa">${[i.modelo,i.dims].filter(Boolean).join(' · ')}</small>`:''}</td>
       <td style="padding:6px 8px;text-align:center;vertical-align:top"><strong>${i.cantidad}</strong> <span style="color:#aaa;font-size:11px">${i.unit}</span></td>
+      ${conPrecio?`<td style="padding:6px 8px;text-align:right;color:#666">${money(i.precio)}</td>
+      <td style="padding:6px 8px;text-align:right;font-weight:600">${money(Number(i.precio||0)*Number(i.cantidad||0))}</td>`:''}
       <td style="padding:6px 8px;text-align:right"><button class="btn btn-danger btn-sm" onclick="removeGuiaItem(${i.id})">✕</button></td>
-    </tr>`).join('')}</tbody></table>`;
+    </tr>`).join('')}</tbody>
+    ${conPrecio?`<tfoot><tr><td colspan="${3}"></td>
+      <td style="padding:8px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.4px">Total</td>
+      <td style="padding:8px;text-align:right;font-weight:700;font-size:14px">${money(total)}</td><td></td></tr></tfoot>`:''}
+  </table>`;
 }
 
 /* ═══════════════ FOTOS DE RESPALDO DE LAS GUÍAS ═══════════════
@@ -2163,6 +2242,142 @@ function descargarFotoActual(){
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 
+/* ═══════════════ EMISOR Y CHOFERES (pestaña Empresa) ═══════════════ */
+function money(n){ return '$'+Number(n||0).toLocaleString('es-CL'); }
+
+const EMISOR_DEF = {razon:'Surframe', rut:'', giro:'', direccion:'', ciudad:'', fono:'', mail:''};
+function emisorCfg(){ return {...EMISOR_DEF, ...(CONFIG.emisor||{})}; }
+
+function renderEmisorForm(){
+  const e = emisorCfg();
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
+  set('em-razon', e.razon); set('em-rut', e.rut); set('em-giro', e.giro);
+  set('em-dir', e.direccion); set('em-ciudad', e.ciudad); set('em-fono', e.fono); set('em-mail', e.mail);
+  const ok=document.getElementById('em-ok'); if(ok) ok.textContent='';
+  const err=document.getElementById('em-err'); if(err) err.textContent='';
+}
+
+async function guardarEmisor(){
+  const err=document.getElementById('em-err'), ok=document.getElementById('em-ok');
+  err.textContent=''; ok.textContent='';
+  if(!esAdmin()){ err.textContent='Solo los administradores pueden editar los datos del emisor.'; return; }
+  const v = id=>document.getElementById(id).value.trim();
+  const emisor = {razon:v('em-razon'), rut:v('em-rut'), giro:v('em-giro'),
+                  direccion:v('em-dir'), ciudad:v('em-ciudad'), fono:v('em-fono'), mail:v('em-mail')};
+  const btn=document.getElementById('em-save'); btn.disabled=true;
+  showSync('Guardando…');
+  try{
+    const r=await fetch(`${FB_URL}/config/emisor.json`,{method:'PUT',body:JSON.stringify(emisor)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    CONFIG.emisor=emisor;
+    ok.textContent='Datos guardados.';
+    setTimeout(()=>{ ok.textContent=''; }, 2500);
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  finally{ hideSync(); btn.disabled=false; }
+}
+
+/* ── Choferes / patentes guardados ── */
+function getChoferes(){ return toArr(CONFIG.choferes); }
+
+function renderChoferes(){
+  const c=document.getElementById('ch-lista');
+  if(!c) return;
+  const lista=getChoferes();
+  c.innerHTML = lista.length
+    ? `<table style="width:100%;font-size:13px;border-collapse:collapse">
+        <thead><tr style="background:#f4f4f4">
+          <th style="text-align:left;padding:6px 8px">Chofer</th>
+          <th style="text-align:left;padding:6px 8px">RUT</th>
+          <th style="text-align:left;padding:6px 8px">Patente</th><th></th>
+        </tr></thead>
+        <tbody>${lista.map((ch,i)=>`<tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:6px 8px"><strong>${ch.nombre||'—'}</strong></td>
+          <td style="padding:6px 8px;color:#666">${ch.rut||'—'}</td>
+          <td style="padding:6px 8px"><code style="font-size:12px">${ch.patente||'—'}</code></td>
+          <td style="padding:6px 8px;text-align:right">${esAdmin()?`<button class="btn btn-danger btn-sm" onclick="quitarChofer(${i})">✕</button>`:''}</td>
+        </tr>`).join('')}</tbody></table>`
+    : '<div style="color:#bbb;font-size:13px;padding:6px 0">Aún no hay choferes guardados.</div>';
+}
+
+async function guardarChoferes(lista){
+  const r=await fetch(`${FB_URL}/config/choferes.json`,{method:'PUT',body:JSON.stringify(lista)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  CONFIG.choferes=lista;
+}
+
+async function agregarChofer(){
+  const err=document.getElementById('ch-err'); err.textContent='';
+  if(!esAdmin()){ err.textContent='Solo los administradores pueden agregar choferes.'; return; }
+  const nombre=document.getElementById('ch-nom').value.trim();
+  const rut=document.getElementById('ch-rut').value.trim();
+  const patente=document.getElementById('ch-pat').value.trim().toUpperCase();
+  if(!nombre){ err.textContent='Escribe el nombre del chofer.'; return; }
+  const lista=getChoferes();
+  if(lista.some(c=>String(c.nombre).toLowerCase()===nombre.toLowerCase() && String(c.patente||'')===patente)){
+    err.textContent='Ese chofer ya está guardado con esa patente.'; return;
+  }
+  showSync('Guardando…');
+  try{
+    await guardarChoferes(lista.concat([{nombre, rut, patente}]));
+    document.getElementById('ch-nom').value='';
+    document.getElementById('ch-rut').value='';
+    document.getElementById('ch-pat').value='';
+    renderChoferes();
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  finally{ hideSync(); }
+}
+
+async function quitarChofer(i){
+  if(!esAdmin()) return;
+  const lista=getChoferes();
+  const ch=lista[i];
+  if(!ch || !confirm(`¿Quitar a ${ch.nombre} de la lista de choferes?`)) return;
+  showSync('Eliminando…');
+  try{
+    lista.splice(i,1);
+    await guardarChoferes(lista);
+    renderChoferes();
+  }catch(e){ document.getElementById('ch-err').textContent='Error al eliminar: '+e.message; }
+  finally{ hideSync(); }
+}
+
+/* Guarda automáticamente el chofer usado en una guía, si es uno nuevo */
+async function registrarChofer(ch){
+  if(!ch.nombre && !ch.patente) return;
+  const lista=getChoferes();
+  const ya=lista.some(c=>String(c.nombre||'').toLowerCase()===String(ch.nombre||'').toLowerCase()
+                      && String(c.patente||'').toUpperCase()===String(ch.patente||'').toUpperCase());
+  if(ya) return;
+  try{ await guardarChoferes(lista.concat([ch])); renderChoferes(); }
+  catch(e){ /* que no bloquee la emisión de la guía */ }
+}
+
+/* ── Selector de chofer dentro del modal de guía ── */
+function llenarChoferesGuia(){
+  const sel=document.getElementById('gd-chofer-sel');
+  if(!sel) return;
+  const lista=getChoferes();
+  sel.innerHTML='<option value="">— Escribir uno nuevo —</option>'+
+    lista.map((c,i)=>`<option value="${i}">${c.nombre}${c.patente?' · '+c.patente:''}</option>`).join('');
+  sel.value='';
+}
+
+function aplicarChoferGuia(){
+  const sel=document.getElementById('gd-chofer-sel');
+  const ch=getChoferes()[Number(sel.value)];
+  if(!ch) return;
+  document.getElementById('gd-chofer').value=ch.nombre||'';
+  document.getElementById('gd-chofer-rut').value=ch.rut||'';
+  document.getElementById('gd-patente').value=ch.patente||'';
+}
+
+/* La dirección de entrega parte con la del cliente y se puede editar */
+function autoDirEntrega(){
+  const cli=CLIENTES.find(c=>String(c.id)===String(document.getElementById('gd-cliente').value));
+  const dir=document.getElementById('gd-dir');
+  if(cli && !dir.value.trim()) dir.value=cli.direccion||'';
+}
+
 /* ═══ LOGO DE LA EMPRESA (pestaña Empresa) ═══ */
 function renderLogoPrev(){
   const img=document.getElementById('emp-logo-prev');
@@ -2238,7 +2453,8 @@ function renderGuiasTable(){
       <td><code style="font-size:12px;font-weight:600">${g.numero}</code></td>
       <td style="color:#666;font-size:13px">${fmtFecha(g.fecha)}</td>
       <td><strong>${g.cliente}</strong></td>
-      <td style="color:#666;font-size:13px">${g.emitidoPor||'—'}</td>
+      <td style="color:#666;font-size:13px">${g.emitidoPor||'—'}
+        ${(g.patente||g.chofer)?`<br><small style="color:#aaa">🚚 ${[g.patente,g.chofer].filter(Boolean).join(' · ')}</small>`:''}</td>
       <td style="font-size:12px;color:#666" title="${detalle}">
         ${items.length} ítem${items.length===1?'':'s'} · ${totalU} u.
       </td>
@@ -2266,11 +2482,11 @@ function renderClientesTable(){
   const empty=document.getElementById('cli-empty');
   if(!tbody) return;
   const q=(document.getElementById('adm-cli-search')?.value||'').toLowerCase();
-  const data=CLIENTES.filter(c=>!q||[c.nombre,c.rut,c.direccion,c.contacto].join(' ').toLowerCase().includes(q));
+  const data=CLIENTES.filter(c=>!q||[c.nombre,c.rut,c.giro,c.direccion,c.contacto].join(' ').toLowerCase().includes(q));
   if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   tbody.innerHTML=data.map(c=>`<tr>
-    <td><strong>${c.nombre}</strong></td>
+    <td><strong>${c.nombre}</strong>${c.giro?`<br><small style="color:#aaa">${c.giro}</small>`:''}</td>
     <td style="color:#666;font-size:13px">${c.rut||'—'}</td>
     <td style="color:#666;font-size:13px">${c.direccion||'—'}</td>
     <td style="color:#666;font-size:13px">${c.contacto||'—'}</td>
@@ -2289,6 +2505,7 @@ function openClienteModal(id=null, desdeGuia=false){
   const c = id ? CLIENTES.find(x=>Number(x.id)===Number(id)) : null;
   document.getElementById('mc-nombre').value   = c ? c.nombre    : '';
   document.getElementById('mc-rut').value      = c ? (c.rut||'')       : '';
+  document.getElementById('mc-giro').value     = c ? (c.giro||'')      : '';
   document.getElementById('mc-dir').value      = c ? (c.direccion||'') : '';
   document.getElementById('mc-contacto').value = c ? (c.contacto||'')  : '';
   document.getElementById('mo-cliente').classList.add('open');
@@ -2303,6 +2520,7 @@ async function saveCliente(){
   const item={
     nombre,
     rut:document.getElementById('mc-rut').value.trim(),
+    giro:document.getElementById('mc-giro').value.trim(),
     direccion:document.getElementById('mc-dir').value.trim(),
     contacto:document.getElementById('mc-contacto').value.trim()
   };
@@ -2353,11 +2571,22 @@ async function generarGuia(){
       await apiPost({type:'piece', action:'save', item:{...p, qty:Number(p.qty)-it.cantidad}});
     }
     // 2) Guardar el registro de la guía e incrementar el correlativo
+    const chofer={nombre:document.getElementById('gd-chofer').value.trim(),
+                  rut:document.getElementById('gd-chofer-rut').value.trim(),
+                  patente:document.getElementById('gd-patente').value.trim().toUpperCase()};
+    const total=guiaItems.reduce((a,i)=>a+Number(i.precio||0)*Number(i.cantidad||0),0);
     const registro={numero, fecha, cliente,
                     clienteRut:(cli&&cli.rut)||'', clienteDir:(cli&&cli.direccion)||'',
+                    clienteGiro:(cli&&cli.giro)||'', clienteContacto:(cli&&cli.contacto)||'',
+                    dirEntrega:document.getElementById('gd-dir').value.trim()||((cli&&cli.direccion)||''),
+                    traslado:document.getElementById('gd-traslado').value,
+                    observaciones:document.getElementById('gd-obs').value.trim(),
+                    chofer:chofer.nombre, choferRut:chofer.rut, patente:chofer.patente,
                     emitidoPor:currentUser.name,
                     items:guiaItems.map(i=>({codigo:i.codigo,nombre:i.nombre,modelo:i.modelo||'',
-                                             dims:i.dims||'',cantidad:i.cantidad,unit:i.unit})),
+                                             dims:i.dims||'',cantidad:i.cantidad,unit:i.unit,
+                                             precio:Number(i.precio)||0})),
+                    total,
                     fotos:0,
                     creado:new Date().toISOString()};
     await fetch(`${FB_URL}/guias/${numero}.json`,{method:'PUT',body:JSON.stringify(registro)});
@@ -2366,6 +2595,7 @@ async function generarGuia(){
     CONFIG.nextGuia=sig;
     GUIAS.push(registro);
     renderGuiasTable();
+    registrarChofer(chofer);   // queda disponible para las próximas guías
     /* 2b) Fotos de respaldo. Van después del registro: si fallan, la guía ya
        quedó guardada y las fotos se pueden agregar desde la pestaña Guías. */
     if(guiaFotosPend.length){
@@ -2407,63 +2637,148 @@ function crearPDF(g){
 function construirGuiaPDF(g){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
-  const top = 15;
+  const M = 15, R = 195;                       // márgenes izquierdo y derecho
+  const em = emisorCfg();
+  const items = toArr(g.items);
+  const conPrecio = items.some(i=>Number(i.precio)>0);
+  const total = Number(g.total) || items.reduce((a,i)=>a+Number(i.precio||0)*Number(i.cantidad||0),0);
 
-  if(CONFIG.logo){
-    try{ doc.addImage(CONFIG.logo, 15, top, 34, 34, undefined, 'FAST'); }catch(e){ console.warn('logo', e); }
-  }
-  doc.setFontSize(18); doc.setFont(undefined,'bold');
-  doc.text('GUÍA DE DESPACHO', 195, top+9, {align:'right'});
-  doc.setFontSize(12);
-  doc.text('N° '+g.numero, 195, top+17, {align:'right'});
+  const gris = ()=>doc.setTextColor(115);
+  const negro = ()=>doc.setTextColor(20);
 
-  let y = top + 38;
-  doc.setDrawColor(190); doc.line(15, y, 195, y); y += 9;
-
-  doc.setFontSize(10); doc.setFont(undefined,'normal');
-  const fila=(et,val)=>{
-    doc.setTextColor(110); doc.text(et, 15, y);
-    doc.setTextColor(20); doc.setFont(undefined,'bold'); doc.text(String(val), 58, y);
-    doc.setFont(undefined,'normal'); y += 6.5;
-  };
-  fila('Fecha de emisión:', fmtFecha(g.fecha));
-  fila('Cliente:',          g.cliente);
-  if(g.clienteRut) fila('RUT:',       g.clienteRut);
-  if(g.clienteDir) fila('Dirección:', g.clienteDir);
-  fila('Emitida por:',      g.emitidoPor);
-
-  doc.autoTable({
-    startY: y + 4,
-    head: [['Código','Producto','Modelo','Dimensiones','Cant.']],
-    body: g.items.map(i=>[
-      i.codigo,
-      i.nombre,
-      i.modelo || '—',
-      i.dims   || '—',
-      String(i.cantidad) + (i.unit ? '\n'+i.unit : '')
-    ]),
-    styles:{ fontSize:8.5, cellPadding:2.4, lineColor:[225,225,225], lineWidth:0.1, valign:'middle' },
-    headStyles:{ fillColor:[17,17,17], textColor:255, fontStyle:'bold', fontSize:8.5 },
-    columnStyles:{
-      0:{cellWidth:22},
-      1:{cellWidth:58},
-      2:{cellWidth:36},
-      3:{cellWidth:42},
-      4:{halign:'center', cellWidth:22, fontStyle:'bold'}
-    },
-    margin:{left:15,right:15}
+  /* ── Encabezado: emisor a la izquierda, recuadro identificatorio a la derecha ── */
+  const bx = 132, bw = R-bx, by = 14;
+  const lineasBox = [
+    em.rut ? 'R.U.T.: '+em.rut : null,
+    'GUÍA DE DESPACHO',
+    'N° '+g.numero
+  ].filter(Boolean);
+  const bh = 8 + lineasBox.length*7;
+  doc.setLineWidth(0.6); doc.setDrawColor(20);
+  doc.roundedRect(bx, by, bw, bh, 2, 2);
+  doc.setLineWidth(0.2);
+  let byy = by + 9;
+  lineasBox.forEach((t,i)=>{
+    doc.setFont(undefined,'bold');
+    doc.setFontSize(i===lineasBox.length-1 ? 11.5 : (i===0&&em.rut ? 9.5 : 10.5));
+    negro(); doc.text(t, bx+bw/2, byy, {align:'center'});
+    byy += 7;
   });
 
-  let fy = doc.lastAutoTable.finalY + 28;
-  if(fy > 250){ doc.addPage(); fy = 45; }
-  doc.setDrawColor(130);
-  doc.line(22, fy, 88, fy); doc.line(122, fy, 188, fy);
-  doc.setFontSize(9); doc.setTextColor(90);
-  doc.text('Entregado por', 55, fy+5, {align:'center'});
-  doc.text('Recibido por', 155, fy+5, {align:'center'});
+  let hx = M;
+  if(CONFIG.logo){
+    try{ doc.addImage(CONFIG.logo, M, by, 24, 24, undefined, 'FAST'); hx = M+29; }
+    catch(e){ console.warn('logo', e); }
+  }
+  let hy = by + 6;
+  doc.setFont(undefined,'bold'); doc.setFontSize(13); negro();
+  doc.text(String(em.razon||'Surframe'), hx, hy);
+  doc.setFont(undefined,'normal'); doc.setFontSize(8.5); gris();
+  [ em.giro     ? 'Giro: '+em.giro : null,
+    em.direccion? em.direccion + (em.ciudad?', '+em.ciudad:'') : (em.ciudad||null),
+    [em.fono, em.mail].filter(Boolean).join('  ·  ') || null
+  ].filter(Boolean).forEach(t=>{ hy += 5; doc.text(t, hx, hy, {maxWidth: bx-hx-6}); });
 
-  doc.setFontSize(8); doc.setTextColor(140);
-  doc.text('Surframe — Solutions for the food industry', 105, 287, {align:'center'});
+  /* ── Datos de emisión y receptor ── */
+  let y = Math.max(hy + 8, by + bh + 8, by + 32);
+  const colD = 108;                              // inicio de la segunda columna
+  const filas = [
+    ['Fecha de emisión:', fmtFecha(g.fecha),           'Tipo de traslado:', g.traslado || 'Venta'],
+    ['Señor(es):',        g.cliente || '—',            'R.U.T.:',           g.clienteRut || '—'],
+    ['Giro:',             g.clienteGiro || '—',        'Teléfono:',         g.clienteContacto || '—'],
+    ['Dirección entrega:',g.dirEntrega || g.clienteDir || '—', 'Emitida por:', g.emitidoPor || '—']
+  ];
+  const cajaH = filas.length*6.6 + 6;
+  doc.setDrawColor(205); doc.setFillColor(250);
+  doc.roundedRect(M, y, R-M, cajaH, 2, 2, 'FD');
+  let fy = y + 7.5;
+  doc.setFontSize(8.5);
+  filas.forEach(([e1,v1,e2,v2])=>{
+    doc.setFont(undefined,'normal'); gris(); doc.text(e1, M+4, fy);
+    doc.setFont(undefined,'bold');   negro();
+    doc.text(String(v1), M+34, fy, {maxWidth: colD-M-38});
+    doc.setFont(undefined,'normal'); gris(); doc.text(e2, colD, fy);
+    doc.setFont(undefined,'bold');   negro();
+    doc.text(String(v2), colD+28, fy, {maxWidth: R-colD-30});
+    fy += 6.6;
+  });
+  y += cajaH + 5;
+
+  /* ── Detalle ── */
+  const head = conPrecio
+    ? [['Cód.','Descripción','Cant.','P. unit.','Total']]
+    : [['Cód.','Descripción','Modelo','Dimensiones','Cant.']];
+  const body = items.map(i=>{
+    const detalle = [i.modelo, i.dims].filter(Boolean).join(' · ');
+    const cant = String(i.cantidad) + (i.unit ? ' '+i.unit : '');
+    return conPrecio
+      ? [i.codigo, i.nombre + (detalle?'\n'+detalle:''), cant,
+         money(i.precio), money(Number(i.precio||0)*Number(i.cantidad||0))]
+      : [i.codigo, i.nombre, i.modelo||'—', i.dims||'—', cant];
+  });
+  doc.autoTable({
+    startY: y,
+    head, body,
+    styles:{ fontSize:8.5, cellPadding:2.4, lineColor:[225,225,225], lineWidth:0.1, valign:'middle' },
+    headStyles:{ fillColor:[17,17,17], textColor:255, fontStyle:'bold', fontSize:8.5 },
+    columnStyles: conPrecio
+      ? {0:{cellWidth:20}, 1:{cellWidth:76}, 2:{cellWidth:22, halign:'center'},
+         3:{cellWidth:30, halign:'right'}, 4:{cellWidth:32, halign:'right', fontStyle:'bold'}}
+      : {0:{cellWidth:22}, 1:{cellWidth:58}, 2:{cellWidth:36}, 3:{cellWidth:42},
+         4:{cellWidth:22, halign:'center', fontStyle:'bold'}},
+    margin:{left:M, right:M}
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  /* ── Observaciones + transporte, y total ── */
+  const transporte = [
+    g.patente ? 'Patente '+g.patente : null,
+    g.chofer  ? 'Chofer: '+g.chofer + (g.choferRut ? ', '+g.choferRut : '') : null
+  ].filter(Boolean).join('  —  ') || 'No registrado';
+  const anchoPie = conPrecio ? 118 : R-M;
+  const pieH = 24;
+  if(y + pieH + 60 > 285){ doc.addPage(); y = 20; }
+
+  doc.setDrawColor(205); doc.setFillColor(255);
+  doc.roundedRect(M, y, anchoPie, pieH, 2, 2);
+  doc.setFontSize(8.5);
+  gris(); doc.setFont(undefined,'normal'); doc.text('Observaciones / referencia:', M+4, y+7);
+  negro(); doc.setFont(undefined,'bold');
+  doc.text(String(g.observaciones||'—'), M+48, y+7, {maxWidth: anchoPie-52});
+  gris(); doc.setFont(undefined,'normal'); doc.text('Transporte:', M+4, y+15);
+  negro(); doc.setFont(undefined,'bold');
+  doc.text(transporte, M+48, y+15, {maxWidth: anchoPie-52});
+
+  if(conPrecio){
+    const tx = M + anchoPie + 4, tw = R - tx;
+    doc.setDrawColor(20); doc.setLineWidth(0.5);
+    doc.roundedRect(tx, y, tw, pieH, 2, 2);
+    doc.setLineWidth(0.2);
+    doc.setFontSize(8); gris(); doc.setFont(undefined,'normal');
+    doc.text('TOTAL', tx+tw/2, y+8, {align:'center'});
+    doc.setFontSize(14); negro(); doc.setFont(undefined,'bold');
+    doc.text(money(total), tx+tw/2, y+17, {align:'center'});
+  }
+  y += pieH + 20;
+
+  /* ── Firmas y espacio para el timbre ── */
+  doc.setDrawColor(130); doc.setLineWidth(0.2);
+  doc.line(M+8, y, M+72, y); doc.line(120, y, 188, y);
+  doc.setFontSize(8.5); gris();
+  doc.text('Entregado por', M+40, y+5, {align:'center'});
+  doc.text('Recibido por (nombre, RUT y fecha)', 154, y+5, {align:'center'});
+
+  y += 15;
+  try{ doc.setLineDashPattern([1.2,1.2], 0); }catch(e){}
+  doc.setDrawColor(180);
+  doc.roundedRect(M, y, 84, 22, 2, 2);
+  try{ doc.setLineDashPattern([], 0); }catch(e){}
+  doc.setFontSize(7.5); doc.setTextColor(150);
+  doc.text('Espacio reservado para timbre electrónico', M+42, y+12.5, {align:'center'});
+
+  doc.setFontSize(7.5); doc.setTextColor(150);
+  doc.text('Documento interno de respaldo de despacho.', 105, 288, {align:'center'});
+  doc.text('No constituye una guía de despacho electrónica (DTE) autorizada por el S.I.I.', 105, 292, {align:'center'});
 
   return doc;
 }
