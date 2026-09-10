@@ -123,6 +123,33 @@ tbody td{padding:10px 14px;vertical-align:middle}
   padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .fotos-vacio{color:#bbb;font-size:13px;padding:10px 0}
 .up{text-transform:uppercase}
+.spec-row{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+.spec-row input{flex:1;min-width:0;padding:8px 11px;border:1px solid #ddd;border-radius:8px;font-size:13.5px;outline:none;font-family:inherit}
+.spec-row input:focus{border-color:#111}
+.qr-prev{display:flex;flex-direction:column;align-items:center;gap:14px}
+.qr-prev canvas{max-width:100%;width:300px;height:auto;border:1px solid #eee;border-radius:10px;background:#fff}
+.qr-link{font-size:11.5px;color:#888;word-break:break-all;text-align:center;background:#fafafa;
+  border:1px solid #eee;border-radius:8px;padding:7px 10px;width:100%}
+
+/* ── FICHA TÉCNICA PÚBLICA (destino del QR) ── */
+#screen-ficha{display:none;min-height:100vh;background:#f7f7f7;padding:22px 14px 40px}
+.ficha-card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;max-width:760px;margin:0 auto;overflow:hidden}
+.ficha-hd{display:flex;align-items:center;gap:14px;padding:20px 22px;border-bottom:2px solid #111;flex-wrap:wrap}
+.ficha-hd img{max-height:54px;max-width:130px}
+.ficha-hd .razon{font-size:17px;font-weight:800;letter-spacing:2px;text-transform:uppercase;line-height:1.15}
+.ficha-hd .sub{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:#777}
+.ficha-body{padding:22px}
+.ficha-tit{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#999;margin-bottom:10px}
+.ficha-maq{font-size:23px;font-weight:700;line-height:1.2;margin-bottom:4px}
+.ficha-ot{font-size:13px;color:#777;margin-bottom:20px}
+.ficha-tabla{width:100%;border-collapse:collapse;font-size:14px}
+.ficha-tabla td{padding:9px 4px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+.ficha-tabla td:first-child{color:#888;width:44%;font-size:13px}
+.ficha-tabla td:last-child{font-weight:600}
+.ficha-nota{margin-top:18px;background:#fafafa;border:1px solid #eee;border-radius:9px;padding:12px 14px;font-size:13.5px;line-height:1.5;color:#444}
+.ficha-pie{text-align:center;padding:16px;border-top:1px solid #eee;font-size:12.5px;color:#888}
+.ficha-pie a{color:#111;font-weight:600;text-decoration:none}
+.ficha-vacia{max-width:420px;margin:14vh auto;background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:2rem;text-align:center;color:#777;font-size:14px}
 .up::placeholder{text-transform:none}
 
 /* ── CALENDARIO ── */
@@ -520,6 +547,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <button class="atab"        onclick="switchAdminTab('usr')">Usuarios</button>
         <button class="atab"        onclick="switchAdminTab('emp')">Empresa</button>
         <button class="atab"        onclick="switchAdminTab('gui')">Guías</button>
+        <button class="atab"        onclick="switchAdminTab('maq')">Códigos QR</button>
       </div>
 
       <div class="atab-panel active" id="atab-inv">
@@ -602,6 +630,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
             <div class="form-group"><label>Ciudad / Comuna</label><input id="em-ciudad" placeholder="Ej: Santiago"></div>
             <div class="form-group"><label>Teléfono</label><input id="em-fono" placeholder="Ej: +56 2 2345 6789"></div>
             <div class="form-group full"><label>Email</label><input id="em-mail" placeholder="Ej: ventas@surframe.cl"></div>
+            <div class="form-group"><label>Sitio web</label><input id="em-web" placeholder="www.surframespa.com"></div>
+            <div class="form-group"><label>URL base de las fichas QR</label><input id="em-urlficha" placeholder="Dejar vacío para usar esta misma página"></div>
           </div>
           <div style="color:#999;font-size:12px;margin-top:10px">Estos datos encabezan todas las guías de despacho en PDF.</div>
           <div class="modal-err" id="em-err"></div>
@@ -682,9 +712,33 @@ tbody td{padding:10px 14px;vertical-align:middle}
           <div class="empty" id="gui-empty" style="display:none">Aún no se ha emitido ninguna guía.</div>
         </div>
       </div>
+
+      <div class="atab-panel" id="atab-maq">
+        <div class="section-hd">
+          <h3>Códigos QR de maquinaria</h3>
+          <button class="btn btn-primary" onclick="openMaquinaModal()">+ Nueva máquina</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="adm-maq-search" placeholder="Buscar por N° de OT, tipo de máquina o cliente…" oninput="renderMaquinasTable()">
+          <select id="adm-maq-cli" onchange="renderMaquinasTable()"></select>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>N° de OT</th><th>Fecha de fabricación</th><th>Tipo de máquina</th>
+              <th>Cliente</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="maq-tbl"></tbody>
+          </table>
+          <div class="empty" id="maq-empty" style="display:none">Aún no hay máquinas registradas.</div>
+        </div>
+      </div>
     </div>
   </main>
 </div>
+
+<!-- ════════════════════════════════ FICHA TÉCNICA PÚBLICA (QR) ════ -->
+<div id="screen-ficha"></div>
 
 <!-- ════ MODAL PIEZA ════ -->
 <div class="overlay" id="mo-pieza">
@@ -1077,6 +1131,83 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
+<!-- ════ MODAL MÁQUINA / ORDEN DE TRABAJO ════ -->
+<div class="overlay" id="mo-maquina">
+  <div class="modal" style="max-width:700px">
+    <h2 id="mq-title">Nueva máquina</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>N° de OT</label><input id="mq-num" readonly style="background:#f4f4f4;font-weight:600"></div>
+      <div class="form-group"><label>Fecha de fabricación</label><input id="mq-fecha" type="date"></div>
+      <div class="form-group full"><label>Tipo de máquina *</label>
+        <input id="mq-tipo" list="mq-tipos" placeholder="Ej: Desbisadora 5P/6P" autocomplete="off">
+        <datalist id="mq-tipos">
+          <option>Desbisadora</option><option>Rastrillo</option><option>Cinta transportadora</option>
+          <option>Mesa de proceso</option><option>Elevador de canastillos</option><option>Tolva</option>
+          <option>Lavadora de cajas</option><option>Clasificadora</option><option>Dosificadora</option>
+          <option>Transportador helicoidal</option><option>Volteador</option>
+        </datalist>
+      </div>
+      <div class="form-group full"><label>Cliente *</label>
+        <div style="display:flex;gap:8px">
+          <select id="mq-cliente" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
+          <button class="btn btn-outline" onclick="openClienteModal(null,false)" title="Agregar cliente nuevo">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="form-group"><label>Modelo</label><input id="mq-modelo" placeholder="Ej: SF-DES-31"></div>
+      <div class="form-group"><label>N° de serie</label><input id="mq-serie" placeholder="Ej: 2026-031"></div>
+    </div>
+
+    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Especificaciones técnicas</label>
+      <div class="form-grid">
+        <div class="form-group"><label>Largo</label><input id="mq-largo" placeholder="Ej: 3.200 mm"></div>
+        <div class="form-group"><label>Ancho</label><input id="mq-ancho" placeholder="Ej: 900 mm"></div>
+        <div class="form-group"><label>Alto</label><input id="mq-alto" placeholder="Ej: 1.450 mm"></div>
+        <div class="form-group"><label>Peso</label><input id="mq-peso" placeholder="Ej: 420 kg"></div>
+        <div class="form-group"><label>Material de estructura</label><input id="mq-material" placeholder="Ej: AISI 304"></div>
+        <div class="form-group"><label>Potencia</label><input id="mq-potencia" placeholder="Ej: 2,2 kW (3 HP)"></div>
+        <div class="form-group"><label>Alimentación eléctrica</label><input id="mq-voltaje" placeholder="Ej: 380 V / 50 Hz trifásico"></div>
+        <div class="form-group"><label>Capacidad / producción</label><input id="mq-capacidad" placeholder="Ej: 60 piezas/min"></div>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Otras características</label>
+        <div id="mq-specs"></div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="addSpecRow()">＋ Agregar característica</button>
+      </div>
+      <div class="form-group full" style="margin-top:14px">
+        <label>Observaciones</label>
+        <textarea id="mq-notas" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Accesorios incluidos, condiciones de uso, mantención…"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-err" id="mq-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-maquina')">Cancelar</button>
+      <button class="btn btn-outline" id="mq-save" onclick="saveMaquina(false)">Guardar</button>
+      <button class="btn btn-primary" id="mq-qr" onclick="saveMaquina(true)">🔳 Generar QR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL CÓDIGO QR GENERADO ════ -->
+<div class="overlay" id="mo-qr">
+  <div class="modal" style="max-width:420px">
+    <h2 id="qr-title">Código QR</h2>
+    <div id="qr-sub" style="font-size:13px;color:#888;margin:-6px 0 14px"></div>
+    <div class="qr-prev">
+      <canvas id="qr-canvas" width="760" height="980"></canvas>
+      <div class="qr-link" id="qr-url"></div>
+    </div>
+    <div class="modal-err" id="qr-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="verFichaMaquina()">👁 Ver ficha</button>
+      <button class="btn btn-outline" onclick="imprimirQR()">🖨 Imprimir</button>
+      <button class="btn btn-primary" onclick="descargarQR()">⬇ Descargar PNG</button>
+      <button class="btn btn-outline" onclick="closeMo('mo-qr')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL FOTOS DE RESPALDO DE UNA GUÍA ════ -->
 <div class="overlay" id="mo-fotos">
   <div class="modal" style="max-width:640px">
@@ -1134,6 +1265,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.5.2/qrcode.min.js"></script>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════
@@ -1153,6 +1285,7 @@ let CONFIG = {};
 let CLIENTES = [];
 let CRONO = [];
 let PLANOS = {};        // metadatos por id de pieza: {nombre,size,fecha}
+let MAQUINAS = [];      // órdenes de trabajo con ficha técnica y código QR
 
 /* ── API ── */
 function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):Object.values(x); }
@@ -1160,23 +1293,26 @@ function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):O
 /* Ruta en Firebase según el tipo de dato */
 function fbPath(type){
   return type==='user' ? 'users' : type==='insumo' ? 'insumos'
-       : type==='cliente' ? 'clientes' : type==='trabajo' ? 'cronograma' : 'inventory';
+       : type==='cliente' ? 'clientes' : type==='trabajo' ? 'cronograma'
+       : type==='maquina' ? 'maquinas' : 'inventory';
 }
 function fbList(type){
   return type==='user' ? USERS : type==='insumo' ? INS
-       : type==='cliente' ? CLIENTES : type==='trabajo' ? CRONO : INV;
+       : type==='cliente' ? CLIENTES : type==='trabajo' ? CRONO
+       : type==='maquina' ? MAQUINAS : INV;
 }
 function fbSetList(type, arr){
   if(type==='user') USERS = arr;
   else if(type==='insumo') INS = arr;
   else if(type==='cliente') CLIENTES = arr;
   else if(type==='trabajo') CRONO = arr;
+  else if(type==='maquina') MAQUINAS = arr;
   else INV = arr;
 }
 
 /* Lee las colecciones en paralelo (~200ms). No descarga el historial de guías. */
 async function apiGet(){
-  const paths = ['users','inventory','insumos','config','clientes','cronograma','planos'];
+  const paths = ['users','inventory','insumos','config','clientes','cronograma','planos','maquinas'];
   const res = await Promise.all(paths.map(p =>
     fetch(`${FB_URL}/${p}.json`).then(r=>{
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1190,6 +1326,7 @@ async function apiGet(){
   CLIENTES = toArr(res[4]);
   CRONO    = toArr(res[5]);
   PLANOS   = res[6] || {};   // solo metadatos; el PDF se descarga al abrirlo
+  MAQUINAS = toArr(res[7]);
   insumosReady = true;
   backendVersion = 'firebase';
 }
@@ -1296,12 +1433,13 @@ function showPage(p){
 }
 
 function switchAdminTab(t){
-  const order={inv:0,ins:1,usr:2,emp:3,gui:4};
+  const order={inv:0,ins:1,usr:2,emp:3,gui:4,maq:5};
   document.querySelectorAll('.atab').forEach((b,i)=>b.classList.toggle('active',i===order[t]));
-  ['inv','ins','usr','emp','gui'].forEach(k=>
+  ['inv','ins','usr','emp','gui','maq'].forEach(k=>
     document.getElementById('atab-'+k).classList.toggle('active', t===k));
   if(t==='emp'){ renderLogoPrev(); renderEmisorForm(); renderChoferes(); renderClientesTable(); }
   if(t==='gui'){ cargarGuias(); }
+  if(t==='maq'){ populateMaqClientes(); renderMaquinasTable(); }
 }
 
 /* ═══ STATS ═══ */
@@ -2242,10 +2380,350 @@ function descargarFotoActual(){
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 
+/* ═══════════════ MÁQUINAS, FICHA TÉCNICA Y CÓDIGOS QR ═══════════════
+   Cada máquina fabricada tiene una OT correlativa y una ficha técnica pública.
+   El QR apunta a esta misma página con `#ficha=<id>`, así quien lo escanea ve
+   la ficha sin necesidad de iniciar sesión. ═══════════════════════════════ */
+let editMaquinaId = null;
+let qrMaquinaId   = null;
+
+function numOT(){ return 'OT-' + String(Number(CONFIG.nextOT) || 1).padStart(5,'0'); }
+
+function maqSorted(){
+  return MAQUINAS.slice().sort((a,b)=>String(b.numero).localeCompare(String(a.numero),'es',{numeric:true}));
+}
+
+function populateMaqClientes(){
+  const sel=document.getElementById('adm-maq-cli');
+  if(!sel) return;
+  const cur=sel.value;
+  const nombres=[...new Set(MAQUINAS.map(m=>m.cliente).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'es'));
+  sel.innerHTML='<option value="">Todos los clientes</option>'+
+    nombres.map(n=>`<option>${n}</option>`).join('');
+  sel.value=cur;
+}
+
+function renderMaquinasTable(){
+  const tbody=document.getElementById('maq-tbl');
+  const empty=document.getElementById('maq-empty');
+  if(!tbody) return;
+  const q=(document.getElementById('adm-maq-search')?.value||'').toLowerCase().trim();
+  const cli=document.getElementById('adm-maq-cli')?.value||'';
+  const data=maqSorted().filter(m=>{
+    if(cli && m.cliente!==cli) return false;
+    return !q || [m.numero,m.tipo,m.cliente,m.modelo,m.serie].join(' ').toLowerCase().includes(q);
+  });
+  if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(m=>`<tr>
+    <td><code style="font-size:12px;font-weight:600">${m.numero}</code></td>
+    <td style="color:#666;font-size:13px">${fmtFecha(m.fecha)||'—'}</td>
+    <td><strong>${m.tipo||'—'}</strong>${m.modelo?`<br><small style="color:#aaa">${m.modelo}${m.serie?' · N° '+m.serie:''}</small>`:''}</td>
+    <td style="color:#666;font-size:13px">${m.cliente||'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="abrirFicha(${m.id})">👁 Ficha</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:4px" onclick="generarQR(${m.id})">🔳 QR</button>
+      ${esAdmin()?`<button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="openMaquinaModal(${m.id})">✏</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteMaquina(${m.id})">✕</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+/* ── Filas de "otras características" ── */
+function addSpecRow(k='', v=''){
+  const c=document.getElementById('mq-specs');
+  const row=document.createElement('div');
+  row.className='spec-row';
+  row.innerHTML=`<input class="spec-k" placeholder="Característica" value="${String(k).replace(/"/g,'&quot;')}">
+    <input class="spec-v" placeholder="Valor" value="${String(v).replace(/"/g,'&quot;')}">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.remove()">✕</button>`;
+  c.appendChild(row);
+}
+function leerSpecs(){
+  return [...document.querySelectorAll('#mq-specs .spec-row')].map(r=>({
+    k: r.querySelector('.spec-k').value.trim(),
+    v: r.querySelector('.spec-v').value.trim()
+  })).filter(x=>x.k || x.v);
+}
+
+function llenarClientesMaq(){
+  const sel=document.getElementById('mq-cliente');
+  const cur=sel.value;
+  const lista=CLIENTES.slice().sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es'));
+  sel.innerHTML = lista.length
+    ? '<option value="">— Selecciona un cliente —</option>'+
+      lista.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('')
+    : '<option value="">No hay clientes. Usa "+ Nuevo"</option>';
+  sel.value=cur;
+}
+
+function openMaquinaModal(id=null){
+  if(!esAdmin()){ alert('Solo los administradores pueden registrar máquinas.'); return; }
+  editMaquinaId=id;
+  const m = id ? MAQUINAS.find(x=>Number(x.id)===Number(id)) : null;
+  document.getElementById('mq-title').textContent = m ? 'Editar máquina' : 'Nueva máquina';
+  document.getElementById('mq-err').textContent='';
+  document.getElementById('mq-num').value   = m ? m.numero : numOT();
+  document.getElementById('mq-fecha').value = m ? (m.fecha||'') : new Date().toISOString().slice(0,10);
+  const set=(id2,v)=>document.getElementById(id2).value = v || '';
+  set('mq-tipo', m&&m.tipo); set('mq-modelo', m&&m.modelo); set('mq-serie', m&&m.serie);
+  set('mq-largo', m&&m.largo); set('mq-ancho', m&&m.ancho); set('mq-alto', m&&m.alto);
+  set('mq-peso', m&&m.peso); set('mq-material', m&&m.material);
+  set('mq-potencia', m&&m.potencia); set('mq-voltaje', m&&m.voltaje);
+  set('mq-capacidad', m&&m.capacidad); set('mq-notas', m&&m.notas);
+  llenarClientesMaq();
+  const cli = m ? CLIENTES.find(c=>c.nombre===m.cliente) : null;
+  document.getElementById('mq-cliente').value = cli ? String(cli.id) : '';
+  document.getElementById('mq-specs').innerHTML='';
+  toArr(m&&m.specs).forEach(sp=>addSpecRow(sp.k, sp.v));
+  document.getElementById('mo-maquina').classList.add('open');
+}
+
+async function saveMaquina(conQR){
+  const err=document.getElementById('mq-err'); err.textContent='';
+  if(!esAdmin()){ err.textContent='Solo los administradores pueden registrar máquinas.'; return; }
+  const tipo=document.getElementById('mq-tipo').value.trim();
+  const cliId=document.getElementById('mq-cliente').value;
+  const cli=CLIENTES.find(c=>String(c.id)===String(cliId));
+  if(!tipo){ err.textContent='Indica el tipo de máquina.'; return; }
+  if(!cli){ err.textContent='Selecciona el cliente (o crea uno con "+ Nuevo").'; return; }
+  const v=id=>document.getElementById(id).value.trim();
+  const previa = editMaquinaId ? MAQUINAS.find(x=>Number(x.id)===Number(editMaquinaId)) : null;
+  const item={
+    numero: previa ? previa.numero : numOT(),
+    fecha: v('mq-fecha'), tipo, cliente: cli.nombre, clienteRut: cli.rut||'',
+    modelo:v('mq-modelo'), serie:v('mq-serie'),
+    largo:v('mq-largo'), ancho:v('mq-ancho'), alto:v('mq-alto'),
+    peso:v('mq-peso'), material:v('mq-material'), potencia:v('mq-potencia'),
+    voltaje:v('mq-voltaje'), capacidad:v('mq-capacidad'),
+    specs: leerSpecs(), notas: v('mq-notas'),
+    creado: previa ? previa.creado : new Date().toISOString(),
+    creadoPor: previa ? previa.creadoPor : ((currentUser&&currentUser.name)||'')
+  };
+  if(editMaquinaId) item.id=Number(editMaquinaId);
+  const b1=document.getElementById('mq-save'), b2=document.getElementById('mq-qr');
+  b1.disabled=b2.disabled=true;
+  try{
+    await apiPost({type:'maquina', action:'save', item});
+    if(!previa){                                   // correlativo solo para las nuevas
+      const sig=(Number(CONFIG.nextOT)||1)+1;
+      await fetch(`${FB_URL}/config/nextOT.json`,{method:'PUT',body:JSON.stringify(sig)});
+      CONFIG.nextOT=sig;
+    }
+    const guardada=MAQUINAS.find(x=>String(x.numero)===String(item.numero));
+    closeMo('mo-maquina');
+    populateMaqClientes(); renderMaquinasTable();
+    if(conQR && guardada) generarQR(guardada.id);
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  b1.disabled=b2.disabled=false;
+}
+
+async function deleteMaquina(id){
+  const m=MAQUINAS.find(x=>Number(x.id)===Number(id));
+  if(!m) return;
+  if(!confirm(`¿Eliminar la máquina ${m.numero} (${m.tipo})? El código QR impreso dejará de funcionar.`)) return;
+  try{
+    await apiPost({type:'maquina', action:'delete', id});
+    populateMaqClientes(); renderMaquinasTable();
+  }catch(e){ alert('Error al eliminar: '+e.message); }
+}
+
+/* ── URL pública de la ficha ── */
+function fichaUrl(m){
+  const base=(emisorCfg().urlFicha||'').trim();
+  const raiz=(base || (location.origin+location.pathname)).replace(/[#?].*$/,'');
+  return raiz + '#ficha=' + m.id;
+}
+function abrirFicha(id){
+  const m=MAQUINAS.find(x=>Number(x.id)===Number(id));
+  if(m) window.open(fichaUrl(m), '_blank');
+}
+function verFichaMaquina(){ if(qrMaquinaId) abrirFicha(qrMaquinaId); }
+
+/* ── Dibujo del QR: logo arriba, código al centro, sitio web abajo ── */
+function cargarImg(src){
+  return new Promise((res,rej)=>{
+    const im=new Image();
+    im.onload=()=>res(im);
+    im.onerror=()=>rej(new Error('no se pudo cargar el logo'));
+    im.src=src;
+  });
+}
+
+async function dibujarBadgeQR(canvas, m){
+  if(typeof qrcode!=='function') throw new Error('no se pudo cargar la librería de códigos QR');
+  const cfg=emisorCfg();
+  const url=fichaUrl(m);
+  const FUENTE="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+  const W=760, MARGEN=48, LOGO_H=150;
+
+  const qr=qrcode(0,'M');
+  qr.addData(url);
+  qr.make();
+  const n=qr.getModuleCount();
+  const celda=Math.floor(560/(n+8));          // 4 módulos de zona blanca a cada lado
+  const ladoQR=celda*n;
+  const qrTop=MARGEN+LOGO_H+46;
+  const H=qrTop+ladoQR+150;
+
+  canvas.width=W; canvas.height=H;
+  const cx=canvas.getContext('2d');
+  cx.fillStyle='#fff'; cx.fillRect(0,0,W,H);
+  cx.textAlign='center';
+
+  if(CONFIG.logo){
+    try{
+      const img=await cargarImg(CONFIG.logo);
+      const esc=Math.min(320/img.naturalWidth, LOGO_H/img.naturalHeight);
+      const w=img.naturalWidth*esc, h=img.naturalHeight*esc;
+      cx.drawImage(img, (W-w)/2, MARGEN+(LOGO_H-h)/2, w, h);
+    }catch(e){ console.warn('logo QR', e); }
+  }else{
+    cx.fillStyle='#111'; cx.font='800 46px '+FUENTE;
+    cx.fillText(String(cfg.razon||'SURFRAME').toUpperCase(), W/2, MARGEN+LOGO_H/2+16);
+  }
+
+  /* Los módulos van en coordenadas enteras: media pixel de antialiasing basta
+     para que el lector no reconozca el código. */
+  cx.fillStyle='#000';
+  const x0=Math.round((W-ladoQR)/2);
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++)
+    if(qr.isDark(r,c)) cx.fillRect(x0+c*celda, qrTop+r*celda, celda, celda);
+
+  let ty=qrTop+ladoQR+62;
+  cx.fillStyle='#111'; cx.font='700 38px '+FUENTE;
+  cx.fillText(cfg.web || 'www.surframespa.com', W/2, ty);
+  ty+=42;
+  cx.fillStyle='#777'; cx.font='400 27px '+FUENTE;
+  cx.fillText(`${m.numero}  ·  ${m.tipo||''}`.trim(), W/2, ty);
+  return url;
+}
+
+async function generarQR(id){
+  const m=MAQUINAS.find(x=>Number(x.id)===Number(id));
+  if(!m) return;
+  qrMaquinaId=Number(id);
+  document.getElementById('qr-title').textContent='Código QR · '+m.numero;
+  document.getElementById('qr-sub').textContent=[m.tipo, m.cliente].filter(Boolean).join(' · ');
+  const err=document.getElementById('qr-err'); err.textContent='';
+  document.getElementById('mo-qr').classList.add('open');
+  try{
+    const url=await dibujarBadgeQR(document.getElementById('qr-canvas'), m);
+    document.getElementById('qr-url').textContent=url;
+  }catch(e){
+    err.textContent='No se pudo generar el código: '+e.message;
+  }
+}
+
+function descargarQR(){
+  const m=MAQUINAS.find(x=>Number(x.id)===Number(qrMaquinaId));
+  document.getElementById('qr-canvas').toBlob(b=>{
+    const url=URL.createObjectURL(b);
+    const a=document.createElement('a');
+    a.href=url; a.download='QR-'+((m&&m.numero)||'maquina')+'.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }, 'image/png');
+}
+
+function imprimirQR(){
+  const m=MAQUINAS.find(x=>Number(x.id)===Number(qrMaquinaId));
+  const data=document.getElementById('qr-canvas').toDataURL('image/png');
+  const w=window.open('', '_blank');
+  if(!w){ document.getElementById('qr-err').textContent='El navegador bloqueó la ventana de impresión.'; return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>QR ${(m&&m.numero)||''}</title>
+    <style>body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
+    img{max-width:90vw;max-height:95vh}@media print{body{height:auto}}</style></head>
+    <body><img src="${data}" onload="window.focus();window.print()"></body></html>`);
+  w.document.close();
+}
+
+/* ── Ficha técnica: filas visibles a partir de la máquina ── */
+function fichaFilas(m){
+  const dims=[m.largo,m.ancho,m.alto].filter(Boolean).join('  ×  ');
+  return [
+    ['Cliente',                    m.cliente],
+    ['N° de OT',                   m.numero],
+    ['Fecha de fabricación',       fmtFecha(m.fecha)],
+    ['Modelo',                     m.modelo],
+    ['N° de serie',                m.serie],
+    ['Dimensiones (largo × ancho × alto)', dims],
+    ['Peso',                       m.peso],
+    ['Material de estructura',     m.material],
+    ['Potencia',                   m.potencia],
+    ['Alimentación eléctrica',     m.voltaje],
+    ['Capacidad / producción',     m.capacidad]
+  ].concat(toArr(m.specs).map(sp=>[sp.k, sp.v]))
+   .filter(([k,v])=>k && v);
+}
+
+function esc(t){
+  return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderFicha(m, cfg, logo){
+  const web=(cfg.web||'www.surframespa.com').replace(/^https?:\/\//,'');
+  document.title=`Ficha técnica · ${m.numero} · ${cfg.razon||'Surframe'}`;
+  document.getElementById('screen-ficha').innerHTML=`
+    <div class="ficha-card">
+      <div class="ficha-hd">
+        ${logo?`<img src="${logo}" alt="Logo">`:''}
+        <div>
+          <div class="razon">${esc(cfg.razon||'Surframe')}</div>
+          <div class="sub">${esc(cfg.giro||'Solutions for the food industry')}</div>
+        </div>
+      </div>
+      <div class="ficha-body">
+        <div class="ficha-tit">Ficha técnica de maquinaria</div>
+        <div class="ficha-maq">${esc(m.tipo||'Máquina')}</div>
+        <div class="ficha-ot">${esc(m.numero)}${m.modelo?' · '+esc(m.modelo):''}${m.serie?' · N° de serie '+esc(m.serie):''}</div>
+        <table class="ficha-tabla"><tbody>
+          ${fichaFilas(m).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}
+        </tbody></table>
+        ${m.notas?`<div class="ficha-nota">${esc(m.notas)}</div>`:''}
+      </div>
+      <div class="ficha-pie">
+        ${[cfg.direccion, cfg.ciudad].filter(Boolean).map(esc).join(', ')}
+        ${cfg.fono?'<br>'+esc(cfg.fono):''}${cfg.mail?' · '+esc(cfg.mail):''}
+        <br><a href="https://${esc(web)}" target="_blank" rel="noopener">${esc(web)}</a>
+      </div>
+    </div>`;
+  document.getElementById('screen-ficha').style.display='block';
+}
+
+function fichaIdDeHash(){
+  const mm=String(location.hash||'').match(/^#ficha=(\d+)$/);
+  return mm ? mm[1] : null;
+}
+
+/* Vista pública: no pide sesión y solo baja la máquina y la configuración */
+async function mostrarFichaPublica(id){
+  const cont=document.getElementById('screen-ficha');
+  document.getElementById('screen-login').style.display='none';
+  cont.style.display='block';
+  cont.innerHTML='<div class="ficha-vacia">Cargando ficha técnica…</div>';
+  try{
+    const [rm, rc]=await Promise.all([
+      fetch(`${FB_URL}/maquinas/${id}.json`),
+      fetch(`${FB_URL}/config.json`)
+    ]);
+    if(!rm.ok || !rc.ok) throw new Error('HTTP');
+    const m=await rm.json();
+    const cfg=(await rc.json()) || {};
+    if(!m){ cont.innerHTML='<div class="ficha-vacia">No se encontró la ficha técnica de esta máquina.</div>'; return; }
+    CONFIG=cfg;
+    renderFicha(m, {...EMISOR_DEF, ...(cfg.emisor||{})}, cfg.logo||'');
+  }catch(e){
+    cont.innerHTML='<div class="ficha-vacia">No se pudo cargar la ficha técnica. Revisa tu conexión e inténtalo de nuevo.</div>';
+  }
+}
+
 /* ═══════════════ EMISOR Y CHOFERES (pestaña Empresa) ═══════════════ */
 function money(n){ return '$'+Number(n||0).toLocaleString('es-CL'); }
 
-const EMISOR_DEF = {razon:'Surframe', rut:'', giro:'', direccion:'', ciudad:'', fono:'', mail:''};
+const EMISOR_DEF = {razon:'Surframe', rut:'', giro:'', direccion:'', ciudad:'', fono:'', mail:'',
+                    web:'www.surframespa.com', urlFicha:''};
 function emisorCfg(){ return {...EMISOR_DEF, ...(CONFIG.emisor||{})}; }
 
 function renderEmisorForm(){
@@ -2253,6 +2731,7 @@ function renderEmisorForm(){
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
   set('em-razon', e.razon); set('em-rut', e.rut); set('em-giro', e.giro);
   set('em-dir', e.direccion); set('em-ciudad', e.ciudad); set('em-fono', e.fono); set('em-mail', e.mail);
+  set('em-web', e.web); set('em-urlficha', e.urlFicha);
   const ok=document.getElementById('em-ok'); if(ok) ok.textContent='';
   const err=document.getElementById('em-err'); if(err) err.textContent='';
 }
@@ -2263,7 +2742,8 @@ async function guardarEmisor(){
   if(!esAdmin()){ err.textContent='Solo los administradores pueden editar los datos del emisor.'; return; }
   const v = id=>document.getElementById(id).value.trim();
   const emisor = {razon:v('em-razon'), rut:v('em-rut'), giro:v('em-giro'),
-                  direccion:v('em-dir'), ciudad:v('em-ciudad'), fono:v('em-fono'), mail:v('em-mail')};
+                  direccion:v('em-dir'), ciudad:v('em-ciudad'), fono:v('em-fono'), mail:v('em-mail'),
+                  web:v('em-web'), urlFicha:v('em-urlficha')};
   const btn=document.getElementById('em-save'); btn.disabled=true;
   showSync('Guardando…');
   try{
@@ -2530,10 +3010,15 @@ async function saveCliente(){
     await apiPost({type:'cliente', action:'save', item});
     closeMo('mo-cliente');
     renderClientesTable();
+    const nuevo=CLIENTES.find(c=>String(c.nombre).toLowerCase()===nombre.toLowerCase());
     if(clienteDesdeGuia){
       llenarClientesGuia();
-      const nuevo=CLIENTES.find(c=>String(c.nombre).toLowerCase()===nombre.toLowerCase());
       if(nuevo) document.getElementById('gd-cliente').value=String(nuevo.id);
+    }
+    /* Si el cliente se creó desde el modal de máquina, dejarlo seleccionado ahí */
+    if(document.getElementById('mo-maquina').classList.contains('open')){
+      llenarClientesMaq();
+      if(nuevo) document.getElementById('mq-cliente').value=String(nuevo.id);
     }
   }catch(e){ err.textContent='Error al guardar: '+e.message; }
   btn.disabled=false;
@@ -3590,6 +4075,10 @@ async function importCSV(){
 
 /* ═══ INIT ═══ */
 async function init(){
+  /* El QR de una máquina abre la ficha pública: no pide sesión ni descarga
+     el resto de la base. */
+  const idFicha=fichaIdDeHash();
+  if(idFicha){ mostrarFichaPublica(idFicha); return; }
   const info=document.getElementById('l-info');
   const btn=document.getElementById('l-btn');
   if(FB_URL.indexOf('__FIREBASE') >= 0){
