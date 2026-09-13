@@ -1206,8 +1206,6 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <input id="mq-doc" class="up" placeholder="SF-FT-012026">
         <small style="color:#aaa;font-size:11px;margin-top:4px">Si lo dejas vacío se arma con la OT y el año.</small>
       </div>
-      <div class="form-group"><label>Revisión</label><input id="mq-rev" placeholder="00"></div>
-      <div class="form-group"><label>Fecha del documento</label><input id="mq-fdoc" type="date"></div>
     </div>
 
     <!-- 01 -->
@@ -2679,11 +2677,8 @@ function openMaquinaModal(id=null){
   document.getElementById('mq-title').textContent = m ? 'Editar ficha técnica' : 'Nueva máquina';
   document.getElementById('mq-err').textContent='';
   const set=(id2,v)=>document.getElementById(id2).value = (v==null?'':v);
-  const hoy=new Date().toISOString().slice(0,10);
   set('mq-num',  m ? m.numero : numOT());
   set('mq-doc',  m ? (m.documento||'') : '');
-  set('mq-rev',  m ? (m.revision||'00') : '00');
-  set('mq-fdoc', m ? (m.fechaDoc||'') : hoy);
   set('mq-tipo', m&&m.tipo);
   set('mq-fab',  m ? (m.fabricante||'') : emisorCfg().razon);
   set('mq-area', m&&m.area);
@@ -2740,8 +2735,6 @@ async function saveMaquina(conQR){
     ...(previa||{}),                 // conserva datos de fichas anteriores (serie, peso, etc.)
     numero, anio,
     documento: v('mq-doc').toUpperCase(),
-    revision: v('mq-rev') || '00',
-    fechaDoc: v('mq-fdoc'),
     cliente: cli.nombre, clienteRut: cli.rut||'',
     tipo, fabricante: v('mq-fab'), area: v('mq-area'), tag: v('mq-tag'), modelo: v('mq-modelo'),
     descripcion: v('mq-desc'), material: v('mq-material'),
@@ -3078,7 +3071,6 @@ function renderFicha(m, cfg, logo, imagen){
         <div class="ficha-doc">
           <strong>Ficha técnica</strong>
           <span>Documento de equipo</span>
-          <span>Rev. ${esc(m.revision||'00')}${m.fechaDoc?' · Fecha '+esc(fmtFecha(m.fechaDoc)):''}</span>
         </div>
       </div>
       <div class="ficha-body">
@@ -3103,7 +3095,6 @@ function renderFicha(m, cfg, logo, imagen){
         </div>
         <div>
           <strong>Control documental</strong>
-          Revisión: ${esc(m.revision||'00')}<br>
           Elaboró: ${esc(m.elaboro||'—')}<br>
           Revisó: ${esc(m.reviso||'—')}<br>
           Aprobó: ${esc(m.aprobo||'—')}
