@@ -123,9 +123,22 @@ tbody td{padding:10px 14px;vertical-align:middle}
   padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .fotos-vacio{color:#bbb;font-size:13px;padding:10px 0}
 .up{text-transform:uppercase}
-.spec-row{display:flex;gap:8px;align-items:center;margin-bottom:7px}
-.spec-row input{flex:1;min-width:0;padding:8px 11px;border:1px solid #ddd;border-radius:8px;font-size:13.5px;outline:none;font-family:inherit}
-.spec-row input:focus{border-color:#111}
+/* Tablas editables del modal de máquina (repuestos y mantenimiento) */
+.tabla-edit{margin-bottom:8px}
+.te-row{display:grid;gap:6px;align-items:center;margin-bottom:6px}
+.te-row input{min-width:0;width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-family:inherit}
+.te-row input:focus{border-color:#111}
+.te-row .te-n{font-size:11px;font-weight:700;color:#999;text-align:center}
+.te-hd{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#888;margin-bottom:4px}
+.te-rep{grid-template-columns:26px minmax(0,1.3fr) 58px minmax(0,2fr) 32px}
+.te-mant{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1.6fr) 32px}
+@media(max-width:600px){
+  .te-rep{grid-template-columns:22px 1fr 52px 32px}
+  .te-rep .te-esp{grid-column:2/4}
+  .te-mant{grid-template-columns:1fr 1fr 32px}
+  .te-mant .te-crit{grid-column:1/3}
+  .te-hd{display:none}
+}
 .qr-prev{display:flex;flex-direction:column;align-items:center;gap:14px}
 .qr-prev canvas{max-width:100%;width:300px;height:auto;border:1px solid #eee;border-radius:10px;background:#fff}
 .qr-link{font-size:11.5px;color:#888;word-break:break-all;text-align:center;background:#fafafa;
@@ -133,22 +146,69 @@ tbody td{padding:10px 14px;vertical-align:middle}
 
 /* ── FICHA TÉCNICA PÚBLICA (destino del QR) ── */
 #screen-ficha{display:none;min-height:100vh;background:#f7f7f7;padding:22px 14px 40px}
-.ficha-card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;max-width:760px;margin:0 auto;overflow:hidden}
-.ficha-hd{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:2px solid #111;flex-wrap:wrap}
-.ficha-hd img{max-height:66px;max-width:min(300px,72vw);width:auto;display:block}
+.ficha-card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;max-width:860px;margin:0 auto;overflow:hidden}
+.ficha-hd{display:flex;align-items:center;justify-content:space-between;gap:14px 20px;padding:18px 22px;border-bottom:2px solid #111;flex-wrap:wrap}
+.ficha-hd img{max-height:62px;max-width:min(300px,70vw);width:auto;display:block}
 .ficha-hd .razon{font-size:17px;font-weight:800;letter-spacing:2px;text-transform:uppercase;line-height:1.15}
 .ficha-hd .sub{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:#777}
-.ficha-body{padding:22px}
-.ficha-tit{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#999;margin-bottom:10px}
-.ficha-maq{font-size:23px;font-weight:700;line-height:1.2;margin-bottom:4px}
-.ficha-ot{font-size:13px;color:#777;margin-bottom:20px}
-.ficha-tabla{width:100%;border-collapse:collapse;font-size:14px}
-.ficha-tabla td{padding:9px 4px;border-bottom:1px solid #f0f0f0;vertical-align:top}
-.ficha-tabla td:first-child{color:#888;width:44%;font-size:13px}
-.ficha-tabla td:last-child{font-weight:600}
-.ficha-nota{margin-top:18px;background:#fafafa;border:1px solid #eee;border-radius:9px;padding:12px 14px;font-size:13.5px;line-height:1.5;color:#444}
-.ficha-pie{text-align:center;padding:16px;border-top:1px solid #eee;font-size:12.5px;color:#888}
-.ficha-pie a{color:#111;font-weight:600;text-decoration:none}
+.ficha-doc{text-align:right;line-height:1.35}
+.ficha-doc strong{display:block;font-size:13px;letter-spacing:1.2px;text-transform:uppercase}
+.ficha-doc span{display:block;font-size:11px;color:#777;letter-spacing:.4px}
+.ficha-body{padding:20px 22px 6px}
+.ficha-maq{font-size:23px;font-weight:700;line-height:1.2}
+.ficha-ot{font-size:13px;color:#777;margin:4px 0 18px}
+.ficha-sec{margin-bottom:22px;break-inside:avoid}
+.ficha-sec h3{background:#111;color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:9px 14px;border-radius:8px;margin-bottom:10px}
+.ficha-kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px}
+.ficha-kv .kv{padding:9px 2px;border-bottom:1px solid #f0f0f0;min-width:0}
+.ficha-kv .kv.full{grid-column:1/-1}
+.kv-l{font-size:10.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#999;margin-bottom:3px}
+.kv-v{font-size:14px;font-weight:600;line-height:1.4;word-wrap:break-word;white-space:pre-line}
+.ficha-rows .kv{display:grid;grid-template-columns:190px minmax(0,1fr);gap:14px;padding:10px 2px;border-bottom:1px solid #f0f0f0}
+.ficha-rows .kv-l{margin:2px 0 0}
+.ficha-rows .kv-v{font-weight:500}
+.ficha-dims{display:flex;flex-wrap:wrap;gap:4px 18px}
+.ficha-dims b{font-weight:600}
+.ficha-dims span{color:#888;font-weight:500}
+.ficha-tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.ficha-tbl th{background:#f4f4f4;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#555;padding:8px 10px}
+.ficha-tbl td{padding:9px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;line-height:1.4}
+.ficha-tbl td.c{text-align:center;white-space:nowrap}
+.ficha-tbl td.n{color:#999;font-size:12px;width:34px}
+.ficha-rep{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:16px;align-items:start}
+.ficha-rep.sin-img{grid-template-columns:minmax(0,1fr)}
+.ficha-img{border:2px solid #111;border-radius:10px;overflow:hidden;background:#fff}
+.ficha-img img{width:100%;display:block}
+.ficha-txt{font-size:13.5px;line-height:1.55;color:#333;white-space:pre-line}
+.ficha-pie{display:grid;grid-template-columns:1.3fr 1fr 1fr;border-top:2px solid #111;font-size:12px;color:#555;line-height:1.5}
+.ficha-pie > div{padding:14px 18px;border-right:1px solid #eee}
+.ficha-pie > div:last-child{border-right:none}
+.ficha-pie strong{display:block;color:#111;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+.ficha-web{text-align:center;padding:12px;border-top:1px solid #eee;font-size:12.5px}
+.ficha-web a{color:#111;font-weight:700;text-decoration:none}
+.ficha-print{display:block;max-width:860px;margin:0 auto 10px;text-align:right}
+@media(max-width:600px){
+  #screen-ficha{padding:12px 8px 30px}
+  .ficha-hd{padding:16px}
+  .ficha-doc{text-align:left}
+  .ficha-body{padding:16px 14px 2px}
+  .ficha-rows .kv{grid-template-columns:1fr;gap:2px}
+  .ficha-rep{grid-template-columns:1fr}
+  .ficha-tbl thead{display:none}
+  .ficha-tbl tr{display:block;border:1px solid #eee;border-radius:9px;padding:6px 10px;margin-bottom:8px}
+  .ficha-tbl td{display:flex;gap:10px;border:none;padding:4px 0}
+  .ficha-tbl td::before{content:attr(data-lbl);flex:0 0 96px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#999;padding-top:2px}
+  .ficha-tbl td.c{text-align:left}
+  .ficha-tbl td.n{width:auto}
+  .ficha-pie{grid-template-columns:1fr}
+  .ficha-pie > div{border-right:none;border-bottom:1px solid #eee}
+}
+@media print{
+  #screen-ficha{background:#fff;padding:0}
+  .ficha-print{display:none}
+  .ficha-card{border:none;border-radius:0;max-width:none}
+  .ficha-sec h3,.ficha-tbl th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 .ficha-vacia{max-width:420px;margin:14vh auto;background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:2rem;text-align:center;color:#777;font-size:14px}
 .up::placeholder{text-transform:none}
 
@@ -725,7 +785,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>N° de OT</th><th>Fecha de fabricación</th><th>Tipo de máquina</th>
+              <th>N° de OT</th><th>Año de fabricación</th><th>Tipo de máquina</th>
               <th>Cliente</th><th>Acciones</th>
             </tr></thead>
             <tbody id="maq-tbl"></tbody>
@@ -1131,55 +1191,113 @@ tbody td{padding:10px 14px;vertical-align:middle}
   </div>
 </div>
 
-<!-- ════ MODAL MÁQUINA / ORDEN DE TRABAJO ════ -->
+<!-- ════ MODAL MÁQUINA / FICHA TÉCNICA ════ -->
 <div class="overlay" id="mo-maquina">
-  <div class="modal" style="max-width:700px">
+  <div class="modal" style="max-width:760px">
     <h2 id="mq-title">Nueva máquina</h2>
+
+    <!-- Documento -->
     <div class="form-grid">
       <div class="form-group"><label>N° de OT *</label>
         <input id="mq-num" class="up" style="font-weight:600" placeholder="OT-00001">
         <small style="color:#aaa;font-size:11px;margin-top:4px">Se propone el siguiente, pero puedes escribir otro para cargar OT antiguas.</small>
       </div>
-      <div class="form-group"><label>Fecha de fabricación</label><input id="mq-fecha" type="date"></div>
-      <div class="form-group full"><label>Tipo de máquina *</label>
-        <input id="mq-tipo" list="mq-tipos" placeholder="Ej: Desbisadora 5P/6P" autocomplete="off">
-        <datalist id="mq-tipos">
-          <option>Desbisadora</option><option>Rastrillo</option><option>Cinta transportadora</option>
-          <option>Mesa de proceso</option><option>Elevador de canastillos</option><option>Tolva</option>
-          <option>Lavadora de cajas</option><option>Clasificadora</option><option>Dosificadora</option>
-          <option>Transportador helicoidal</option><option>Volteador</option>
-        </datalist>
+      <div class="form-group"><label>N° de documento</label>
+        <input id="mq-doc" class="up" placeholder="SF-FT-012026">
+        <small style="color:#aaa;font-size:11px;margin-top:4px">Si lo dejas vacío se arma con la OT y el año.</small>
       </div>
-      <div class="form-group full"><label>Cliente *</label>
-        <div style="display:flex;gap:8px">
-          <select id="mq-cliente" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
-          <button class="btn btn-outline" onclick="openClienteModal(null,false)" title="Agregar cliente nuevo">+ Nuevo</button>
-        </div>
-      </div>
-      <div class="form-group"><label>Modelo</label><input id="mq-modelo" placeholder="Ej: SF-DES-31"></div>
-      <div class="form-group"><label>N° de serie</label><input id="mq-serie" placeholder="Ej: 2026-031"></div>
+      <div class="form-group"><label>Revisión</label><input id="mq-rev" placeholder="00"></div>
+      <div class="form-group"><label>Fecha del documento</label><input id="mq-fdoc" type="date"></div>
     </div>
 
-    <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid #eee">
-      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Especificaciones técnicas</label>
+    <!-- 01 -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">01 · Identificación del equipo</label>
       <div class="form-grid">
-        <div class="form-group"><label>Largo</label><input id="mq-largo" placeholder="Ej: 3.200 mm"></div>
-        <div class="form-group"><label>Ancho</label><input id="mq-ancho" placeholder="Ej: 900 mm"></div>
-        <div class="form-group"><label>Alto</label><input id="mq-alto" placeholder="Ej: 1.450 mm"></div>
-        <div class="form-group"><label>Peso</label><input id="mq-peso" placeholder="Ej: 420 kg"></div>
-        <div class="form-group"><label>Material de estructura</label><input id="mq-material" placeholder="Ej: AISI 304"></div>
-        <div class="form-group"><label>Potencia</label><input id="mq-potencia" placeholder="Ej: 2,2 kW (3 HP)"></div>
-        <div class="form-group"><label>Alimentación eléctrica</label><input id="mq-voltaje" placeholder="Ej: 380 V / 50 Hz trifásico"></div>
-        <div class="form-group"><label>Capacidad / producción</label><input id="mq-capacidad" placeholder="Ej: 60 piezas/min"></div>
+        <div class="form-group full"><label>Cliente *</label>
+          <div style="display:flex;gap:8px">
+            <select id="mq-cliente" style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none"></select>
+            <button class="btn btn-outline" onclick="openClienteModal(null,false)" title="Agregar cliente nuevo">+ Nuevo</button>
+          </div>
+        </div>
+        <div class="form-group full"><label>Equipo (tipo de máquina) *</label>
+          <input id="mq-tipo" list="mq-tipos" placeholder="Ej: Transportadores Recepción Clasificado" autocomplete="off">
+          <datalist id="mq-tipos">
+            <option>Desbisadora</option><option>Rastrillo</option><option>Cinta transportadora</option>
+            <option>Transportador de banda modular</option><option>Mesa de proceso</option>
+            <option>Elevador de canastillos</option><option>Tolva</option><option>Lavadora de cajas</option>
+            <option>Clasificadora</option><option>Dosificadora</option><option>Transportador helicoidal</option>
+          </datalist>
+        </div>
+        <div class="form-group"><label>Fabricante</label><input id="mq-fab" placeholder="Ej: SURFRAME EXTERIORES SpA"></div>
+        <div class="form-group"><label>Servicio / área</label><input id="mq-area" placeholder="Ej: Fabricación / Área Clasificado"></div>
+        <div class="form-group"><label>Código / TAG</label><input id="mq-tag" placeholder="Ej: 7123"></div>
+        <div class="form-group"><label>Modelo</label><input id="mq-modelo" placeholder="Ej: 2026182"></div>
+        <div class="form-group"><label>Año de fabricación</label><input id="mq-anio" type="number" min="1980" max="2100" step="1" placeholder="Ej: 2026"></div>
       </div>
-      <div style="margin-top:10px">
-        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Otras características</label>
-        <div id="mq-specs"></div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="addSpecRow()">＋ Agregar característica</button>
+    </div>
+
+    <!-- 02 -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">02 · Descripción y especificaciones técnicas</label>
+      <div class="form-grid">
+        <div class="form-group full"><label>Descripción</label>
+          <textarea id="mq-desc" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Ej: Transportadores de traspaso desde recepción clasificado hasta doble reparto."></textarea>
+        </div>
+        <div class="form-group full"><label>Material / calidad</label><input id="mq-material" placeholder="Ej: AISI 304 / ASTM A240 – Acabado 2B"></div>
+        <div class="form-group"><label>Ancho</label><input id="mq-ancho" placeholder="Ej: 386 mm"></div>
+        <div class="form-group"><label>Largo</label><input id="mq-largo" placeholder="Ej: 5000 mm"></div>
+        <div class="form-group"><label>Altura</label><input id="mq-alto" placeholder="Ej: 1000 mm"></div>
+        <div class="form-group"><label>Capacidad arrastre</label><input id="mq-capacidad" placeholder="Ej: 150/200 kg · Torque 40 Nm y 80 Nm"></div>
+        <div class="form-group full"><label>Accionamiento · motor / motorreductor</label><input id="mq-motor" placeholder="Ej: Motorreductor DRN71M4"></div>
+        <div class="form-group"><label>Potencia</label><input id="mq-potencia" placeholder="Ej: 0,37 kW"></div>
+        <div class="form-group"><label>RPM</label><input id="mq-rpm" placeholder="Ej: 40 · Eje hueco 20 mm"></div>
+        <div class="form-group full"><label>Componentes principales</label>
+          <textarea id="mq-comp" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Ej: Estructura, banda modular, sprockets, motorreductor, descansos…"></textarea>
+        </div>
       </div>
-      <div class="form-group full" style="margin-top:14px">
-        <label>Observaciones</label>
-        <textarea id="mq-notas" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Accesorios incluidos, condiciones de uso, mantención…"></textarea>
+    </div>
+
+    <!-- 03 -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">03 · Repuestos y componentes críticos</label>
+      <div class="tabla-edit" id="mq-rep"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="addRepRow()">＋ Agregar repuesto</button>
+      <div style="margin-top:14px">
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;display:block;margin-bottom:8px">Imagen del equipo</label>
+        <div class="plano-box" id="mq-img-box"></div>
+        <input type="file" id="mq-img-file" accept="image/*" style="display:none" onchange="elegirImagenMaq(event)">
+      </div>
+    </div>
+
+    <!-- 04 -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">04 · Mantenimiento preventivo</label>
+      <div class="tabla-edit" id="mq-mant"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="addMantRow()">＋ Agregar actividad</button>
+      <button type="button" class="btn btn-outline btn-sm" style="margin-left:4px" onclick="cargarMantEstandar()">Cargar filas estándar</button>
+    </div>
+
+    <!-- 05 -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">05 · Condiciones de operación, seguridad y limpieza</label>
+      <div class="form-grid">
+        <div class="form-group full"><label>Condiciones de operación</label>
+          <textarea id="mq-oper" rows="3" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Ej: El equipo debe operar bajo normativa; todas las protecciones deben estar en posición antes de iniciar procesos…"></textarea>
+        </div>
+        <div class="form-group full"><label>Limpieza</label>
+          <textarea id="mq-limp" rows="3" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Ej: Realizar lavado con agua de consumo; no usar detergentes clorados ni ácidos…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Control documental -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">Control documental</label>
+      <div class="form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div class="form-group"><label>Elaboró</label><input id="mq-elab" placeholder="Ej: LC"></div>
+        <div class="form-group"><label>Revisó</label><input id="mq-revi" placeholder="Iniciales"></div>
+        <div class="form-group"><label>Aprobó</label><input id="mq-apro" placeholder="Iniciales"></div>
       </div>
     </div>
 
@@ -2163,7 +2281,8 @@ const FOTOS_CACHE = {};          // {numero: {idFoto: foto}}
 function nuevoFotoId(){ return 'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* Comprime a JPEG bajando la calidad solo lo necesario para llegar al peso objetivo */
-async function comprimirImagen(file){
+async function comprimirImagen(file, opts={}){
+  const LADO = opts.lado || FOTO_LADO_MAX, META = opts.meta || FOTO_PESO_META;
   const url = URL.createObjectURL(file);
   try{
     const img = await new Promise((res,rej)=>{
@@ -2189,8 +2308,8 @@ async function comprimirImagen(file){
     /* Primero se mantiene la resolución y se ajusta la calidad; recién si sigue
        muy pesada se reduce el tamaño. */
     const intentos = [
-      [FOTO_LADO_MAX, 0.88], [FOTO_LADO_MAX, 0.80], [FOTO_LADO_MAX, 0.72],
-      [1600, 0.78], [1280, 0.72]
+      [LADO, 0.88], [LADO, 0.80], [LADO, 0.72],
+      [Math.round(LADO*0.8), 0.78], [Math.round(LADO*0.64), 0.72]
     ];
     let out = null;
     for(const [lado, q] of intentos){
@@ -2198,7 +2317,7 @@ async function comprimirImagen(file){
       const data = cv.toDataURL('image/jpeg', q);
       const size = Math.round((data.length - (data.indexOf(',')+1)) * 3/4);
       out = {data, size, w, h};
-      if(size <= FOTO_PESO_META) break;
+      if(size <= META) break;
     }
     return {nombre:file.name, data:out.data, size:out.size, w:out.w, h:out.h, original:file.size};
   } finally { URL.revokeObjectURL(url); }
@@ -2423,6 +2542,15 @@ function populateMaqClientes(){
   sel.value=cur;
 }
 
+/* Año de fabricación (las primeras fichas guardaban la fecha completa) */
+function anioDe(m){ return String(m.anio || (m.fecha ? String(m.fecha).slice(0,4) : '')); }
+/* N° de documento: el escrito o SF-FT-<n° de OT><año>, como en la ficha modelo */
+function docDe(m){
+  if(m.documento) return m.documento;
+  const n=otNumero(m.numero);
+  return n ? 'SF-FT-'+String(n).padStart(2,'0')+anioDe(m) : '';
+}
+
 function renderMaquinasTable(){
   const tbody=document.getElementById('maq-tbl');
   const empty=document.getElementById('maq-empty');
@@ -2431,14 +2559,16 @@ function renderMaquinasTable(){
   const cli=document.getElementById('adm-maq-cli')?.value||'';
   const data=maqSorted().filter(m=>{
     if(cli && m.cliente!==cli) return false;
-    return !q || [m.numero,m.tipo,m.cliente,m.modelo,m.serie].join(' ').toLowerCase().includes(q);
+    return !q || [m.numero,m.tipo,m.cliente,m.modelo,m.tag,m.serie,docDe(m)].join(' ').toLowerCase().includes(q);
   });
   if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML=data.map(m=>`<tr>
+  tbody.innerHTML=data.map(m=>{
+    const sub=[m.modelo, m.tag?'TAG '+m.tag:''].filter(Boolean).join(' · ');
+    return `<tr>
     <td><code style="font-size:12px;font-weight:600">${m.numero}</code></td>
-    <td style="color:#666;font-size:13px">${fmtFecha(m.fecha)||'—'}</td>
-    <td><strong>${m.tipo||'—'}</strong>${m.modelo?`<br><small style="color:#aaa">${m.modelo}${m.serie?' · N° '+m.serie:''}</small>`:''}</td>
+    <td style="color:#666;font-size:13px">${anioDe(m)||'—'}</td>
+    <td><strong>${m.tipo||'—'}</strong>${sub?`<br><small style="color:#aaa">${sub}</small>`:''}</td>
     <td style="color:#666;font-size:13px">${m.cliente||'—'}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="abrirFicha(${m.id})">👁 Ficha</button>
@@ -2446,25 +2576,90 @@ function renderMaquinasTable(){
       ${esAdmin()?`<button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="openMaquinaModal(${m.id})">✏</button>
       <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteMaquina(${m.id})">✕</button>`:''}
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
-/* ── Filas de "otras características" ── */
-function addSpecRow(k='', v=''){
-  const c=document.getElementById('mq-specs');
-  const row=document.createElement('div');
-  row.className='spec-row';
-  row.innerHTML=`<input class="spec-k" placeholder="Característica" value="${String(k).replace(/"/g,'&quot;')}">
-    <input class="spec-v" placeholder="Valor" value="${String(v).replace(/"/g,'&quot;')}">
-    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.remove()">✕</button>`;
-  c.appendChild(row);
+/* ── Tablas editables: repuestos (03) y mantenimiento (04) ── */
+function attr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function renumerarRep(){
+  document.querySelectorAll('#mq-rep .te-row:not(.te-hd)').forEach((r,i)=>{ r.querySelector('.te-n').textContent=String(i+1).padStart(2,'0'); });
 }
-function leerSpecs(){
-  return [...document.querySelectorAll('#mq-specs .spec-row')].map(r=>({
-    k: r.querySelector('.spec-k').value.trim(),
-    v: r.querySelector('.spec-v').value.trim()
-  })).filter(x=>x.k || x.v);
+function cabeceraTabla(id, clase, cols){
+  const c=document.getElementById(id);
+  if(!c.querySelector('.te-hd')) c.insertAdjacentHTML('afterbegin',
+    `<div class="te-row ${clase} te-hd">${cols.map(t=>`<div>${t}</div>`).join('')}</div>`);
 }
+function addRepRow(r={}){
+  cabeceraTabla('mq-rep','te-rep',['Ítem','Componente / repuesto','Cant.','Especificación','']);
+  document.getElementById('mq-rep').insertAdjacentHTML('beforeend', `<div class="te-row te-rep">
+    <div class="te-n"></div>
+    <input class="r-comp" placeholder="Ej: Banda modular" value="${attr(r.comp)}">
+    <input class="r-cant" placeholder="Cant." value="${attr(r.cant)}">
+    <input class="r-esp te-esp" placeholder="Ej: Banda FORBO S-10 · ancho 380 mm" value="${attr(r.espec)}">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.remove();renumerarRep()">✕</button>
+  </div>`);
+  renumerarRep();
+}
+function addMantRow(r={}){
+  cabeceraTabla('mq-mant','te-mant',['Componente','Actividad','Frecuencia','Criterio / observación','']);
+  document.getElementById('mq-mant').insertAdjacentHTML('beforeend', `<div class="te-row te-mant">
+    <input class="m-comp" placeholder="Ej: Motorreductor" value="${attr(r.comp)}">
+    <input class="m-act" placeholder="Ej: Inspección visual" value="${attr(r.act)}">
+    <input class="m-frec" placeholder="Ej: 120 hrs/opr" value="${attr(r.frec)}">
+    <input class="m-crit te-crit" placeholder="Ej: Verificar desgaste y fijaciones" value="${attr(r.crit)}">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.remove()">✕</button>
+  </div>`);
+}
+const MANT_ESTANDAR=[
+  {comp:'Motorreductor',    act:'Inspección visual',     frec:'120 hrs/opr',          crit:'Verificar condición general, desgaste y fijaciones.'},
+  {comp:'Descansos',        act:'Lubricación / engrase', frec:'40 hrs/opr',           crit:'Aplicar lubricante compatible con el servicio.'},
+  {comp:'Banda modular',    act:'Limpieza',              frec:'40 hrs/opr',           crit:'Evitar acumulación de producto, humedad o contaminantes.'},
+  {comp:'Conjunto general', act:'Inspección funcional',  frec:'Antes de cada jornada', crit:'Verificar operación, alineamiento y condiciones anormales.'}
+];
+function cargarMantEstandar(){ MANT_ESTANDAR.forEach(r=>addMantRow(r)); }
+
+function leerFilas(sel, map){
+  return [...document.querySelectorAll(sel+' .te-row:not(.te-hd)')].map(row=>{
+    const o={};
+    Object.entries(map).forEach(([k,cls])=>{ o[k]=row.querySelector(cls).value.trim(); });
+    return o;
+  }).filter(o=>Object.values(o).some(Boolean));
+}
+
+/* ── Imagen del equipo (sección 03) ──
+   Va aparte, en `maquinasImg/{id}`, para no engordar la carga de la lista. */
+let mqImg = {estado:'sin', data:null};    // sin | actual | nueva | quitar
+
+function renderImgMaqBox(){
+  const box=document.getElementById('mq-img-box');
+  if(!box) return;
+  const hay = mqImg.estado==='actual' || mqImg.estado==='nueva';
+  box.innerHTML = hay
+    ? `${mqImg.data?`<img src="${mqImg.data}" alt="Imagen del equipo" style="height:64px;border-radius:6px;border:1px solid #e5e5e5">`:'<span style="font-size:13px">🖼 Imagen cargada</span>'}
+       <span style="flex:1;min-width:80px;font-size:12px;color:#999">${mqImg.estado==='nueva'?'Se sube al guardar':''}</span>
+       <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mq-img-file').click()">Cambiar</button>
+       <button type="button" class="btn btn-danger btn-sm" onclick="quitarImagenMaq()">Quitar</button>`
+    : `<span style="color:#999;font-size:13px;flex:1;min-width:120px">Sin imagen. Se comprime automáticamente al subirla.</span>
+       <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mq-img-file').click()">＋ Subir imagen</button>`;
+}
+
+async function elegirImagenMaq(ev){
+  const f=ev.target.files && ev.target.files[0];
+  ev.target.value='';
+  if(!f) return;
+  const err=document.getElementById('mq-err'); err.textContent='';
+  if(!/^image\//.test(f.type)){ err.textContent='El archivo debe ser una imagen.'; return; }
+  showSync('Comprimiendo imagen…');
+  try{
+    const out=await comprimirImagen(f, {lado:1400, meta:350*1024});
+    mqImg={estado:'nueva', data:out.data};
+    renderImgMaqBox();
+  }catch(e){ err.textContent='No se pudo leer la imagen: '+e.message; }
+  finally{ hideSync(); }
+}
+function quitarImagenMaq(){ mqImg={estado:'quitar', data:null}; renderImgMaqBox(); }
 
 function llenarClientesMaq(){
   const sel=document.getElementById('mq-cliente');
@@ -2481,55 +2676,106 @@ function openMaquinaModal(id=null){
   if(!esAdmin()){ alert('Solo los administradores pueden registrar máquinas.'); return; }
   editMaquinaId=id;
   const m = id ? MAQUINAS.find(x=>Number(x.id)===Number(id)) : null;
-  document.getElementById('mq-title').textContent = m ? 'Editar máquina' : 'Nueva máquina';
+  document.getElementById('mq-title').textContent = m ? 'Editar ficha técnica' : 'Nueva máquina';
   document.getElementById('mq-err').textContent='';
-  document.getElementById('mq-num').value   = m ? m.numero : numOT();
-  document.getElementById('mq-fecha').value = m ? (m.fecha||'') : new Date().toISOString().slice(0,10);
-  const set=(id2,v)=>document.getElementById(id2).value = v || '';
-  set('mq-tipo', m&&m.tipo); set('mq-modelo', m&&m.modelo); set('mq-serie', m&&m.serie);
-  set('mq-largo', m&&m.largo); set('mq-ancho', m&&m.ancho); set('mq-alto', m&&m.alto);
-  set('mq-peso', m&&m.peso); set('mq-material', m&&m.material);
-  set('mq-potencia', m&&m.potencia); set('mq-voltaje', m&&m.voltaje);
-  set('mq-capacidad', m&&m.capacidad); set('mq-notas', m&&m.notas);
+  const set=(id2,v)=>document.getElementById(id2).value = (v==null?'':v);
+  const hoy=new Date().toISOString().slice(0,10);
+  set('mq-num',  m ? m.numero : numOT());
+  set('mq-doc',  m ? (m.documento||'') : '');
+  set('mq-rev',  m ? (m.revision||'00') : '00');
+  set('mq-fdoc', m ? (m.fechaDoc||'') : hoy);
+  set('mq-tipo', m&&m.tipo);
+  set('mq-fab',  m ? (m.fabricante||'') : emisorCfg().razon);
+  set('mq-area', m&&m.area);
+  set('mq-tag',  m&&m.tag);
+  set('mq-modelo', m&&m.modelo);
+  set('mq-anio', m ? anioDe(m) : new Date().getFullYear());
+  set('mq-desc', m&&m.descripcion);
+  set('mq-material', m&&m.material);
+  set('mq-ancho', m&&m.ancho); set('mq-largo', m&&m.largo); set('mq-alto', m&&m.alto);
+  set('mq-capacidad', m&&m.capacidad);
+  set('mq-motor', m&&m.motor); set('mq-potencia', m&&m.potencia); set('mq-rpm', m&&m.rpm);
+  set('mq-comp', m&&m.componentes);
+  set('mq-oper', m&&m.condiciones); set('mq-limp', m&&m.limpieza);
+  set('mq-elab', m&&m.elaboro); set('mq-revi', m&&m.reviso); set('mq-apro', m&&m.aprobo);
   llenarClientesMaq();
   const cli = m ? CLIENTES.find(c=>c.nombre===m.cliente) : null;
   document.getElementById('mq-cliente').value = cli ? String(cli.id) : '';
-  document.getElementById('mq-specs').innerHTML='';
-  toArr(m&&m.specs).forEach(sp=>addSpecRow(sp.k, sp.v));
+
+  document.getElementById('mq-rep').innerHTML='';
+  document.getElementById('mq-mant').innerHTML='';
+  toArr(m&&m.repuestos).forEach(r=>addRepRow(r));
+  toArr(m&&m.mantencion).forEach(r=>addMantRow(r));
+  if(!toArr(m&&m.repuestos).length) addRepRow();
+  if(!toArr(m&&m.mantencion).length) addMantRow();
+
+  mqImg = (m && m.imagen) ? {estado:'actual', data:null} : {estado:'sin', data:null};
+  renderImgMaqBox();
+  if(m && m.imagen){                              // miniatura de la imagen ya guardada
+    fetch(`${FB_URL}/maquinasImg/${m.id}.json`).then(r=>r.json()).then(d=>{
+      if(d && mqImg.estado==='actual' && Number(editMaquinaId)===Number(m.id)){ mqImg.data=d; renderImgMaqBox(); }
+    }).catch(()=>{});
+  }
   document.getElementById('mo-maquina').classList.add('open');
 }
 
 async function saveMaquina(conQR){
   const err=document.getElementById('mq-err'); err.textContent='';
   if(!esAdmin()){ err.textContent='Solo los administradores pueden registrar máquinas.'; return; }
-  const tipo=document.getElementById('mq-tipo').value.trim();
-  const cliId=document.getElementById('mq-cliente').value;
-  const cli=CLIENTES.find(c=>String(c.id)===String(cliId));
-  const numero=normOT(document.getElementById('mq-num').value);
+  const v=id=>document.getElementById(id).value.trim();
+  const tipo=v('mq-tipo');
+  const cli=CLIENTES.find(c=>String(c.id)===String(document.getElementById('mq-cliente').value));
+  const numero=normOT(v('mq-num'));
+  const anio=v('mq-anio');
   if(!numero){ err.textContent='Escribe el N° de OT.'; return; }
-  if(!tipo){ err.textContent='Indica el tipo de máquina.'; return; }
   if(!cli){ err.textContent='Selecciona el cliente (o crea uno con "+ Nuevo").'; return; }
+  if(!tipo){ err.textContent='Indica el equipo (tipo de máquina).'; return; }
+  if(anio && !/^\d{4}$/.test(anio)){ err.textContent='El año de fabricación debe tener 4 dígitos (ej: 2026).'; return; }
   const rep2=MAQUINAS.find(m=>String(m.numero).toUpperCase()===numero && Number(m.id)!==Number(editMaquinaId));
   if(rep2){ err.textContent=`Ya existe una máquina con el N° ${numero} (${rep2.tipo}).`; return; }
   document.getElementById('mq-num').value=numero;
-  const v=id=>document.getElementById(id).value.trim();
+
   const previa = editMaquinaId ? MAQUINAS.find(x=>Number(x.id)===Number(editMaquinaId)) : null;
   const item={
-    numero,
-    fecha: v('mq-fecha'), tipo, cliente: cli.nombre, clienteRut: cli.rut||'',
-    modelo:v('mq-modelo'), serie:v('mq-serie'),
-    largo:v('mq-largo'), ancho:v('mq-ancho'), alto:v('mq-alto'),
-    peso:v('mq-peso'), material:v('mq-material'), potencia:v('mq-potencia'),
-    voltaje:v('mq-voltaje'), capacidad:v('mq-capacidad'),
-    specs: leerSpecs(), notas: v('mq-notas'),
+    ...(previa||{}),                 // conserva datos de fichas anteriores (serie, peso, etc.)
+    numero, anio,
+    documento: v('mq-doc').toUpperCase(),
+    revision: v('mq-rev') || '00',
+    fechaDoc: v('mq-fdoc'),
+    cliente: cli.nombre, clienteRut: cli.rut||'',
+    tipo, fabricante: v('mq-fab'), area: v('mq-area'), tag: v('mq-tag'), modelo: v('mq-modelo'),
+    descripcion: v('mq-desc'), material: v('mq-material'),
+    ancho: v('mq-ancho'), largo: v('mq-largo'), alto: v('mq-alto'),
+    capacidad: v('mq-capacidad'), motor: v('mq-motor'), potencia: v('mq-potencia'), rpm: v('mq-rpm'),
+    componentes: v('mq-comp'),
+    repuestos: leerFilas('#mq-rep', {comp:'.r-comp', cant:'.r-cant', espec:'.r-esp'}),
+    mantencion: leerFilas('#mq-mant', {comp:'.m-comp', act:'.m-act', frec:'.m-frec', crit:'.m-crit'}),
+    condiciones: v('mq-oper'), limpieza: v('mq-limp'),
+    elaboro: v('mq-elab'), reviso: v('mq-revi'), aprobo: v('mq-apro'),
+    imagen: mqImg.estado==='actual' || mqImg.estado==='nueva',
     creado: previa ? previa.creado : new Date().toISOString(),
-    creadoPor: previa ? previa.creadoPor : ((currentUser&&currentUser.name)||'')
+    creadoPor: previa ? previa.creadoPor : ((currentUser&&currentUser.name)||''),
+    editado: new Date().toISOString()
   };
+  if(!item.documento) item.documento = docDe({...item, documento:''});
+  delete item.fecha;                 // reemplazada por el año de fabricación
   if(editMaquinaId) item.id=Number(editMaquinaId);
+
   const b1=document.getElementById('mq-save'), b2=document.getElementById('mq-qr');
   b1.disabled=b2.disabled=true;
   try{
     await apiPost({type:'maquina', action:'save', item});
+    const guardada=MAQUINAS.find(x=>String(x.numero)===String(numero));
+    /* Imagen: se sube o borra después, cuando ya se conoce el id */
+    if(guardada && mqImg.estado==='nueva'){
+      showSync('Subiendo imagen…');
+      const ri=await fetch(`${FB_URL}/maquinasImg/${guardada.id}.json`,{method:'PUT',body:JSON.stringify(mqImg.data)});
+      hideSync();
+      if(!ri.ok) throw new Error('la ficha se guardó, pero la imagen no se pudo subir (HTTP '+ri.status+')');
+    }
+    if(guardada && mqImg.estado==='quitar'){
+      await fetch(`${FB_URL}/maquinasImg/${guardada.id}.json`,{method:'DELETE'});
+    }
     /* El correlativo queda siempre por sobre la OT más alta cargada, aunque se
        hayan ingresado números antiguos o salteados. */
     const sig=Math.max((Number(CONFIG.nextOT)||1), otNumero(numero)+1, proxOT());
@@ -2537,11 +2783,10 @@ async function saveMaquina(conQR){
       await fetch(`${FB_URL}/config/nextOT.json`,{method:'PUT',body:JSON.stringify(sig)});
       CONFIG.nextOT=sig;
     }
-    const guardada=MAQUINAS.find(x=>String(x.numero)===String(numero));
     closeMo('mo-maquina');
     populateMaqClientes(); renderMaquinasTable();
     if(conQR && guardada) generarQR(guardada.id);
-  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  }catch(e){ hideSync(); err.textContent='Error al guardar: '+e.message; }
   b1.disabled=b2.disabled=false;
 }
 
@@ -2551,6 +2796,7 @@ async function deleteMaquina(id){
   if(!confirm(`¿Eliminar la máquina ${m.numero} (${m.tipo})? El código QR impreso dejará de funcionar.`)) return;
   try{
     await apiPost({type:'maquina', action:'delete', id});
+    if(m.imagen) fetch(`${FB_URL}/maquinasImg/${id}.json`,{method:'DELETE'}).catch(()=>{});
     populateMaqClientes(); renderMaquinasTable();
   }catch(e){ alert('Error al eliminar: '+e.message); }
 }
@@ -2743,33 +2989,85 @@ function imprimirQR(){
   w.document.close();
 }
 
-/* ── Ficha técnica: filas visibles a partir de la máquina ── */
-function fichaFilas(m){
-  const dims=[m.largo,m.ancho,m.alto].filter(Boolean).join('  ×  ');
-  return [
-    ['Cliente',                    m.cliente],
-    ['N° de OT',                   m.numero],
-    ['Fecha de fabricación',       fmtFecha(m.fecha)],
-    ['Modelo',                     m.modelo],
-    ['N° de serie',                m.serie],
-    ['Dimensiones (largo × ancho × alto)', dims],
-    ['Peso',                       m.peso],
-    ['Material de estructura',     m.material],
-    ['Potencia',                   m.potencia],
-    ['Alimentación eléctrica',     m.voltaje],
-    ['Capacidad / producción',     m.capacidad]
-  ].concat(toArr(m.specs).map(sp=>[sp.k, sp.v]))
-   .filter(([k,v])=>k && v);
-}
-
+/* ── Ficha técnica pública, con las secciones de la ficha modelo SURFRAME ── */
 function esc(t){
   return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function renderFicha(m, cfg, logo){
+function renderFicha(m, cfg, logo, imagen){
   const web=(cfg.web||'www.surframespa.com').replace(/^https?:\/\//,'');
+  const kv=(l,v,full)=> v ? `<div class="kv${full?' full':''}"><div class="kv-l">${esc(l)}</div><div class="kv-v">${esc(v)}</div></div>` : '';
+  const fila=(l,html)=> html ? `<div class="kv"><div class="kv-l">${esc(l)}</div><div class="kv-v">${html}</div></div>` : '';
+  const partes=arr=>arr.filter(([,v])=>v).map(([l,v])=>`<span>${esc(l)}:</span> <b>${esc(v)}</b>`);
+  const seccion=(n,tit,html)=> html ? `<section class="ficha-sec"><h3>${n} · ${esc(tit)}</h3>${html}</section>` : '';
+
+  const dims=partes([['Ancho',m.ancho],['Largo',m.largo],['Altura',m.alto]]);
+  const acc=partes([['Motor / motorreductor',m.motor],['Potencia',m.potencia],['RPM',m.rpm]]);
+  const rep=toArr(m.repuestos), mant=toArr(m.mantencion);
+  const anio=anioDe(m), doc=docDe(m);
+
+  /* 01 · Identificación */
+  const s01 = `<div class="ficha-kv">
+    ${kv('Cliente', m.cliente, true)}
+    ${kv('Equipo', m.tipo, true)}
+    ${kv('Fabricante', m.fabricante || cfg.razon)}
+    ${kv('Servicio / área', m.area)}
+    ${kv('Código / TAG', m.tag)}
+    ${kv('Modelo', m.modelo)}
+    ${kv('Año', anio)}
+    ${kv('N° de documento', doc)}
+    ${kv('N° de OT', m.numero)}
+    ${kv('N° de serie', m.serie)}
+  </div>`;
+
+  /* 02 · Descripción y especificaciones (más los datos de las primeras fichas) */
+  const s02in = [
+    fila('Descripción', esc(m.descripcion)),
+    fila('Material / calidad', esc(m.material)),
+    fila('Dimensiones', dims.length ? `<div class="ficha-dims">${dims.join('')}</div>` : ''),
+    fila('Capacidad arrastre', esc(m.capacidad)),
+    fila('Accionamiento', acc.length ? `<div class="ficha-dims">${acc.join('')}</div>` : ''),
+    fila('Componentes principales', esc(m.componentes)),
+    fila('Peso', esc(m.peso)),
+    fila('Alimentación eléctrica', esc(m.voltaje)),
+    ...toArr(m.specs).filter(sp=>sp.k&&sp.v).map(sp=>fila(sp.k, esc(sp.v)))
+  ].join('');
+  const s02 = s02in ? `<div class="ficha-rows">${s02in}</div>` : '';
+
+  /* 03 · Repuestos + imagen del equipo */
+  const tablaRep = rep.length ? `<table class="ficha-tbl">
+      <thead><tr><th>Ítem</th><th>Componente / repuesto</th><th>Cant.</th><th>Especificación</th></tr></thead>
+      <tbody>${rep.map((r,i)=>`<tr>
+        <td class="n" data-lbl="Ítem">${String(i+1).padStart(2,'0')}</td>
+        <td data-lbl="Componente"><strong>${esc(r.comp)}</strong></td>
+        <td class="c" data-lbl="Cant.">${esc(r.cant)}</td>
+        <td data-lbl="Especificación">${esc(r.espec)}</td></tr>`).join('')}</tbody></table>` : '';
+  const s03 = (tablaRep || imagen) ? `<div class="ficha-rep${imagen?'':' sin-img'}">
+      <div>${tablaRep}</div>
+      ${imagen?`<div class="ficha-img"><img src="${imagen}" alt="Imagen del equipo"></div>`:''}
+    </div>` : '';
+
+  /* 04 · Mantenimiento preventivo */
+  const s04 = mant.length ? `<table class="ficha-tbl">
+      <thead><tr><th>Componente</th><th>Actividad</th><th>Frecuencia</th><th>Criterio / observación</th></tr></thead>
+      <tbody>${mant.map(r=>`<tr>
+        <td data-lbl="Componente"><strong>${esc(r.comp)}</strong></td>
+        <td data-lbl="Actividad">${esc(r.act)}</td>
+        <td class="c" data-lbl="Frecuencia">${esc(r.frec)}</td>
+        <td data-lbl="Criterio">${esc(r.crit)}</td></tr>`).join('')}</tbody></table>` : '';
+
+  /* 05 · Operación, seguridad y limpieza */
+  const s05in = [
+    fila('Condiciones de operación', m.condiciones ? `<div class="ficha-txt">${esc(m.condiciones)}</div>` : ''),
+    fila('Limpieza', m.limpieza ? `<div class="ficha-txt">${esc(m.limpieza)}</div>` : ''),
+    fila('Observaciones', m.notas ? `<div class="ficha-txt">${esc(m.notas)}</div>` : '')
+  ].join('');
+  const s05 = s05in ? `<div class="ficha-rows">${s05in}</div>` : '';
+
+  const sub=[m.numero, m.modelo?'Modelo '+m.modelo:'', anio?'Año '+anio:''].filter(Boolean).map(esc).join(' · ');
   document.title=`Ficha técnica · ${m.numero} · ${cfg.razon||'Surframe'}`;
   document.getElementById('screen-ficha').innerHTML=`
+    <div class="ficha-print"><button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Imprimir / guardar PDF</button></div>
     <div class="ficha-card">
       <div class="ficha-hd">
         ${logo ? `<img src="${logo}" alt="${esc(cfg.razon||'Surframe')}">` : `
@@ -2777,22 +3075,41 @@ function renderFicha(m, cfg, logo){
           <div class="razon">${esc(cfg.razon||'Surframe')}</div>
           <div class="sub">${esc(cfg.giro||'Solutions for the food industry')}</div>
         </div>`}
+        <div class="ficha-doc">
+          <strong>Ficha técnica</strong>
+          <span>Documento de equipo</span>
+          <span>Rev. ${esc(m.revision||'00')}${m.fechaDoc?' · Fecha '+esc(fmtFecha(m.fechaDoc)):''}</span>
+        </div>
       </div>
       <div class="ficha-body">
-        <div class="ficha-tit">Ficha técnica de maquinaria</div>
-        <div class="ficha-maq">${esc(m.tipo||'Máquina')}</div>
-        <div class="ficha-ot">${esc(m.numero)}${m.modelo?' · '+esc(m.modelo):''}${m.serie?' · N° de serie '+esc(m.serie):''}</div>
-        <table class="ficha-tabla"><tbody>
-          ${fichaFilas(m).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}
-        </tbody></table>
-        ${m.notas?`<div class="ficha-nota">${esc(m.notas)}</div>`:''}
+        <div class="ficha-maq">${esc(m.tipo||'Equipo')}</div>
+        <div class="ficha-ot">${sub}</div>
+        ${seccion('01','Identificación del equipo', s01)}
+        ${seccion('02','Descripción y especificaciones técnicas', s02)}
+        ${seccion('03','Repuestos y componentes críticos', s03)}
+        ${seccion('04','Mantenimiento preventivo', s04)}
+        ${seccion('05','Condiciones de operación, seguridad y limpieza', s05)}
       </div>
       <div class="ficha-pie">
-        <strong style="color:#555">${esc(cfg.razon||'Surframe')}</strong>${cfg.rut?' · '+esc(cfg.rut):''}<br>
-        ${[cfg.direccion, cfg.ciudad].filter(Boolean).map(esc).join(', ')}
-        ${cfg.fono?'<br>'+esc(cfg.fono):''}${cfg.mail?' · '+esc(cfg.mail):''}
-        <br><a href="https://${esc(web)}" target="_blank" rel="noopener">${esc(web)}</a>
+        <div>
+          <strong>${esc(cfg.razon||'Surframe')}</strong>
+          ${cfg.rut?'RUT '+esc(cfg.rut)+'<br>':''}
+          ${[cfg.direccion, cfg.ciudad].map(x=>String(x||'').trim().replace(/,+$/,'')).filter(Boolean).map(esc).join(', ')}${(cfg.direccion||cfg.ciudad)?' · Chile<br>':''}
+          ${[cfg.mail, cfg.fono].filter(Boolean).map(esc).join(' · ')}
+        </div>
+        <div>
+          <strong>Giro</strong>
+          ${esc(cfg.giro||'—')}
+        </div>
+        <div>
+          <strong>Control documental</strong>
+          Revisión: ${esc(m.revision||'00')}<br>
+          Elaboró: ${esc(m.elaboro||'—')}<br>
+          Revisó: ${esc(m.reviso||'—')}<br>
+          Aprobó: ${esc(m.aprobo||'—')}
+        </div>
       </div>
+      <div class="ficha-web"><a href="https://${esc(web)}" target="_blank" rel="noopener">${esc(web)}</a></div>
     </div>`;
   document.getElementById('screen-ficha').style.display='block';
 }
@@ -2818,8 +3135,13 @@ async function mostrarFichaPublica(id){
     const cfg=(await rc.json()) || {};
     if(!m){ cont.innerHTML='<div class="ficha-vacia">No se encontró la ficha técnica de esta máquina.</div>'; return; }
     CONFIG=cfg;
+    let imagen='';
+    if(m.imagen){                    // la imagen es opcional: si falla, la ficha se muestra igual
+      try{ const ri=await fetch(`${FB_URL}/maquinasImg/${id}.json`); if(ri.ok) imagen=(await ri.json())||''; }
+      catch(e){}
+    }
     const L=await logoLimpio();
-    renderFicha(m, {...EMISOR_DEF, ...(cfg.emisor||{})}, (L&&L.data)||'');
+    renderFicha(m, {...EMISOR_DEF, ...(cfg.emisor||{})}, (L&&L.data)||'', imagen);
   }catch(e){
     cont.innerHTML='<div class="ficha-vacia">No se pudo cargar la ficha técnica. Revisa tu conexión e inténtalo de nuevo.</div>';
   }
