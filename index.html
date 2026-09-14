@@ -3651,9 +3651,24 @@ function logoPDF(doc){
   return {data, w, h};
 }
 
+/* Cada guía sale en dos ejemplares dentro del mismo PDF: el original para el
+   cliente, con las líneas de firma, y la copia para la empresa, sin firmas. */
+const GUIA_COPIAS = [
+  {etiqueta:'ORIGINAL · CLIENTE', firmas:true},
+  {etiqueta:'COPIA · EMPRESA',    firmas:false}
+];
+
 function construirGuiaPDF(g){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
+  GUIA_COPIAS.forEach((copia, i)=>{
+    if(i>0) doc.addPage();                     // cada ejemplar parte en hoja nueva
+    dibujarGuiaPDF(doc, g, copia);
+  });
+  return doc;
+}
+
+function dibujarGuiaPDF(doc, g, copia){
   const M = 15, R = 195;                       // márgenes izquierdo y derecho
   const em = emisorCfg();
   const items = toArr(g.items);
@@ -3670,7 +3685,12 @@ function construirGuiaPDF(g){
     'GUÍA DE DESPACHO',
     'N° '+g.numero
   ].filter(Boolean);
-  const bh = 8 + lineasBox.length*7;
+  const bhTxt = 8 + lineasBox.length*7;
+  const banda = 8;                               // franja con "ORIGINAL · CLIENTE" / "COPIA · EMPRESA"
+  const bh = bhTxt + banda;
+  doc.setFillColor(17);
+  doc.roundedRect(bx, by+bhTxt-2, bw, banda+2, 2, 2, 'F');
+  doc.rect(bx, by+bhTxt-2, bw, 3, 'F');          // esquinas superiores de la franja, rectas
   doc.setLineWidth(0.6); doc.setDrawColor(20);
   doc.roundedRect(bx, by, bw, bh, 2, 2);
   doc.setLineWidth(0.2);
@@ -3681,6 +3701,8 @@ function construirGuiaPDF(g){
     negro(); doc.text(t, bx+bw/2, byy, {align:'center'});
     byy += 7;
   });
+  doc.setFont(undefined,'bold'); doc.setFontSize(9); doc.setTextColor(255);
+  doc.text(copia.etiqueta, bx+bw/2, by+bhTxt+4.4, {align:'center', charSpace:0.4});
 
   let hy = by;
   const lg = logoPDF(doc);
@@ -3779,16 +3801,18 @@ function construirGuiaPDF(g){
     doc.setFontSize(14); negro(); doc.setFont(undefined,'bold');
     doc.text(money(total), tx+tw/2, y+17, {align:'center'});
   }
-  y += pieH + 20;
-
-  /* ── Firmas y espacio para el timbre ── */
-  doc.setDrawColor(130); doc.setLineWidth(0.2);
-  doc.line(M+8, y, M+72, y); doc.line(120, y, 188, y);
-  doc.setFontSize(8.5); gris();
-  doc.text('Entregado por', M+40, y+5, {align:'center'});
-  doc.text('Recibido por (nombre, RUT y fecha)', 154, y+5, {align:'center'});
-
-  y += 15;
+  /* ── Firmas (solo en el ejemplar que lleva firma) y espacio para el timbre ── */
+  if(copia.firmas){
+    y += pieH + 20;
+    doc.setDrawColor(130); doc.setLineWidth(0.2);
+    doc.line(M+8, y, M+72, y); doc.line(120, y, 188, y);
+    doc.setFontSize(8.5); gris();
+    doc.text('Entregado por', M+40, y+5, {align:'center'});
+    doc.text('Recibido por (nombre, RUT y fecha)', 154, y+5, {align:'center'});
+    y += 15;
+  }else{
+    y += pieH + 10;
+  }
   try{ doc.setLineDashPattern([1.2,1.2], 0); }catch(e){}
   doc.setDrawColor(180);
   doc.roundedRect(M, y, 84, 22, 2, 2);
@@ -3799,8 +3823,6 @@ function construirGuiaPDF(g){
   doc.setFontSize(7.5); doc.setTextColor(150);
   doc.text('Documento interno de respaldo de despacho.', 105, 288, {align:'center'});
   doc.text('No constituye una guía de despacho electrónica (DTE) autorizada por el S.I.I.', 105, 292, {align:'center'});
-
-  return doc;
 }
 
 /* ═══ VISTA PREVIA DE GUÍA (ventana flotante) ═══ */
