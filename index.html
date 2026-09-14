@@ -918,6 +918,22 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <input id="gd-cant" type="number" min="1" placeholder="Cant." style="width:95px;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();addGuiaItem();}">
         <button class="btn btn-in" onclick="addGuiaItem()">＋ Agregar</button>
       </div>
+      <div style="margin-top:8px">
+        <button type="button" class="btn btn-outline btn-sm" id="gd-libre-btn" onclick="toggleLibreGuia()">＋ Producto fuera de inventario</button>
+      </div>
+      <div id="gd-libre" hidden style="margin-top:10px;background:#fafafa;border:1px dashed #ccc;border-radius:9px;padding:12px">
+        <div style="font-size:12px;color:#888;margin-bottom:8px">Se agrega solo a esta guía: no se crea en el inventario ni descuenta stock.</div>
+        <div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px">
+          <input id="gl-cod" placeholder="Código (opc.)" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;min-width:0">
+          <input id="gl-nom" placeholder="Descripción del producto *" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;min-width:0">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+          <input id="gl-cant" type="number" min="0.01" step="any" placeholder="Cant. *" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;min-width:0;width:95px">
+          <select id="gl-unit" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;min-width:0"><option>unidades</option><option>metros</option><option>kg</option><option>pares</option><option>juegos</option><option>servicio</option></select>
+          <input id="gl-prc" type="number" min="0" placeholder="Precio unit. (opc.)" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;min-width:0;width:150px">
+          <button class="btn btn-in" onclick="addGuiaLibre()">＋ Agregar a la guía</button>
+        </div>
+      </div>
       <div id="gd-lista" style="margin-top:12px"></div>
     </div>
 
@@ -2189,6 +2205,9 @@ function openGuiaModal(){
   document.getElementById('gd-err').textContent='';
   document.getElementById('gd-cant').value='';
   document.getElementById('gd-buscar').value='';
+  ['gl-cod','gl-nom','gl-cant','gl-prc'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('gl-unit').value='unidades';
+  toggleLibreGuia(false);
   document.getElementById('gd-fecha').value=new Date().toISOString().slice(0,10);
   document.getElementById('gd-emisor').value=currentUser.name;
   document.getElementById('gd-num').value=numGuia();
@@ -2231,6 +2250,33 @@ function addGuiaItem(){
 
 function removeGuiaItem(id){ guiaItems=guiaItems.filter(i=>i.id!==id); renderGuiaLista(); }
 
+/* ── Productos fuera de inventario ──
+   Van solo en la guía (libre:true): no descuentan stock ni se crean como pieza.
+   Usan ids negativos para no chocar con los de las piezas. */
+function toggleLibreGuia(forzar){
+  const box=document.getElementById('gd-libre');
+  box.hidden = (typeof forzar==='boolean') ? !forzar : !box.hidden;
+  document.getElementById('gd-libre-btn').textContent = box.hidden ? '＋ Producto fuera de inventario' : '✕ Cerrar producto fuera de inventario';
+  if(!box.hidden) document.getElementById('gl-nom').focus();
+}
+function addGuiaLibre(){
+  const err=document.getElementById('gd-err'); err.textContent='';
+  const nombre=document.getElementById('gl-nom').value.trim();
+  const cant=Number(document.getElementById('gl-cant').value)||0;
+  if(!nombre){ err.textContent='Escribe la descripción del producto.'; return; }
+  if(cant<=0){ err.textContent='Ingresa una cantidad válida para el producto.'; return; }
+  const minId=guiaItems.reduce((m,i)=>Math.min(m, i.id), 0);
+  guiaItems.push({id:minId-1, libre:true,
+    codigo:document.getElementById('gl-cod').value.trim().toUpperCase(),
+    nombre, modelo:'', dims:'', cantidad:cant,
+    unit:document.getElementById('gl-unit').value,
+    precio:Number(document.getElementById('gl-prc').value)||0});
+  ['gl-cod','gl-nom','gl-cant','gl-prc'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('gl-unit').value='unidades';
+  document.getElementById('gl-nom').focus();
+  renderGuiaLista();
+}
+
 function renderGuiaLista(){
   const c=document.getElementById('gd-lista');
   if(!guiaItems.length){
@@ -2248,8 +2294,8 @@ function renderGuiaLista(){
       <th></th>
     </tr></thead>
     <tbody>${guiaItems.map(i=>`<tr style="border-bottom:1px solid #f0f0f0">
-      <td style="padding:6px 8px;vertical-align:top"><code style="font-size:12px">${i.codigo}</code></td>
-      <td style="padding:6px 8px">${i.nombre}
+      <td style="padding:6px 8px;vertical-align:top"><code style="font-size:12px">${i.codigo||'—'}</code></td>
+      <td style="padding:6px 8px">${i.nombre}${i.libre?' <span style="font-size:10px;font-weight:600;color:#9c6a10;background:#fef5e7;border-radius:4px;padding:1px 6px;white-space:nowrap">fuera de inventario</span>':''}
         ${(i.modelo||i.dims)?`<br><small style="color:#aaa">${[i.modelo,i.dims].filter(Boolean).join(' · ')}</small>`:''}</td>
       <td style="padding:6px 8px;text-align:center;vertical-align:top"><strong>${i.cantidad}</strong> <span style="color:#aaa;font-size:11px">${i.unit}</span></td>
       ${conPrecio?`<td style="padding:6px 8px;text-align:right;color:#666">${money(i.precio)}</td>
@@ -3396,7 +3442,7 @@ function renderGuiasTable(){
   tbody.innerHTML=data.map(g=>{
     const items=toArr(g.items);
     const totalU=items.reduce((a,i)=>a+Number(i.cantidad||0),0);
-    const detalle=items.map(i=>`${i.codigo} ×${i.cantidad}`).join(', ');
+    const detalle=items.map(i=>`${i.codigo||i.nombre} ×${i.cantidad}`).join(', ');
     return `<tr>
       <td><code style="font-size:12px;font-weight:600">${g.numero}</code></td>
       <td style="color:#666;font-size:13px">${fmtFecha(g.fecha)}</td>
@@ -3511,6 +3557,7 @@ async function generarGuia(){
   if(!cliente){ err.textContent='Selecciona el cliente a despachar (o crea uno con "+ Nuevo").'; return; }
   if(!guiaItems.length){ err.textContent='Agrega al menos un producto.'; return; }
   for(const it of guiaItems){
+    if(it.libre) continue;
     const p=getInv().find(x=>Number(x.id)===it.id);
     if(!p || Number(p.qty) < it.cantidad){
       err.textContent=`Stock insuficiente de ${it.codigo}. Actualiza y reintenta.`; return;
@@ -3521,6 +3568,7 @@ async function generarGuia(){
   try{
     // 1) Descontar stock de cada producto
     for(const it of guiaItems){
+      if(it.libre) continue;               // fuera de inventario: no hay stock que descontar
       const p=getInv().find(x=>Number(x.id)===it.id);
       await apiPost({type:'piece', action:'save', item:{...p, qty:Number(p.qty)-it.cantidad}});
     }
@@ -3537,9 +3585,9 @@ async function generarGuia(){
                     observaciones:document.getElementById('gd-obs').value.trim(),
                     chofer:chofer.nombre, choferRut:chofer.rut, patente:chofer.patente,
                     emitidoPor:currentUser.name,
-                    items:guiaItems.map(i=>({codigo:i.codigo,nombre:i.nombre,modelo:i.modelo||'',
+                    items:guiaItems.map(i=>({codigo:i.codigo||'',nombre:i.nombre,modelo:i.modelo||'',
                                              dims:i.dims||'',cantidad:i.cantidad,unit:i.unit,
-                                             precio:Number(i.precio)||0})),
+                                             precio:Number(i.precio)||0, ...(i.libre?{libre:true}:{})})),
                     total,
                     fotos:0,
                     creado:new Date().toISOString()};
@@ -3684,9 +3732,9 @@ function construirGuiaPDF(g){
     const detalle = [i.modelo, i.dims].filter(Boolean).join(' · ');
     const cant = String(i.cantidad) + (i.unit ? ' '+i.unit : '');
     return conPrecio
-      ? [i.codigo, i.nombre + (detalle?'\n'+detalle:''), cant,
+      ? [i.codigo||'—', i.nombre + (detalle?'\n'+detalle:''), cant,
          money(i.precio), money(Number(i.precio||0)*Number(i.cantidad||0))]
-      : [i.codigo, i.nombre, i.modelo||'—', i.dims||'—', cant];
+      : [i.codigo||'—', i.nombre, i.modelo||'—', i.dims||'—', cant];
   });
   doc.autoTable({
     startY: y,
