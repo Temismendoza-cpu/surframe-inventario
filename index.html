@@ -2800,9 +2800,14 @@ function fichaUrl(m){
   const raiz=(base || (location.origin+location.pathname)).replace(/[#?].*$/,'');
   return raiz + '#ficha=' + m.id;
 }
+/* El enlace del QR queda fijo desde la primera vez que se genera: aunque se
+   edite la máquina, se rediseñe la imagen o se abra la app desde otra
+   dirección, el código impreso sigue apuntando al mismo lugar. */
+function qrUrlDe(m){ return m.qrUrl || fichaUrl(m); }
+
 function abrirFicha(id){
   const m=MAQUINAS.find(x=>Number(x.id)===Number(id));
-  if(m) window.open(fichaUrl(m), '_blank');
+  if(m) window.open(qrUrlDe(m), '_blank');
 }
 function verFichaMaquina(){ if(qrMaquinaId) abrirFicha(qrMaquinaId); }
 
@@ -2888,7 +2893,7 @@ function cargarImg(src){
 async function dibujarBadgeQR(canvas, m){
   if(typeof qrcode!=='function') throw new Error('no se pudo cargar la librería de códigos QR');
   const cfg=emisorCfg();
-  const url=fichaUrl(m);
+  const url=qrUrlDe(m);
   const FUENTE="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
   const W=760, MARGEN=48;
 
@@ -2979,7 +2984,13 @@ async function generarQR(id){
   document.getElementById('qr-sub').textContent=[m.tipo, m.cliente].filter(Boolean).join(' · ');
   const err=document.getElementById('qr-err'); err.textContent='';
   document.getElementById('mo-qr').classList.add('open');
+  if(!m.qrUrl){                         // primera vez: se guarda el enlace para siempre
+    m.qrUrl=fichaUrl(m);
+    if(esAdmin()) fetch(`${FB_URL}/maquinas/${m.id}.json`,{method:'PATCH',body:JSON.stringify({qrUrl:m.qrUrl})}).catch(()=>{});
+  }
   try{
+    /* La imagen se dibuja de nuevo cada vez con el diseño actual (texto
+       ajustado, logo recortado); el contenido del código no cambia. */
     const url=await dibujarBadgeQR(document.getElementById('qr-canvas'), m);
     document.getElementById('qr-url').textContent=url;
   }catch(e){
