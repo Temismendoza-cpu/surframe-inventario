@@ -2913,7 +2913,36 @@ async function dibujarBadgeQR(canvas, m){
   const celda=Math.floor(560/(n+8));          // 4 módulos de zona blanca a cada lado
   const ladoQR=celda*n;
   const qrTop=MARGEN+logoH+50;
-  const H=qrTop+ladoQR+150;
+
+  /* Los textos se ajustan al ancho: primero se achica la letra y, si aun así no
+     cabe, se reparte en varias líneas. El alto de la imagen crece según eso,
+     así nada queda cortado aunque el nombre del equipo sea largo. */
+  const ANCHO_TXT=W-80;
+  const medir=document.createElement('canvas').getContext('2d');
+  const ajustar=(txt, peso, max, min)=>{
+    txt=String(txt||'').trim();
+    for(let px=max; px>=min; px--){
+      medir.font=`${peso} ${px}px ${FUENTE}`;
+      if(medir.measureText(txt).width<=ANCHO_TXT) return {px, peso, lineas:[txt]};
+    }
+    medir.font=`${peso} ${min}px ${FUENTE}`;
+    const lineas=[]; let cur='';
+    txt.split(/\s+/).forEach(pal=>{
+      const prueba=cur ? cur+' '+pal : pal;
+      if(cur && medir.measureText(prueba).width>ANCHO_TXT){ lineas.push(cur); cur=pal; }
+      else cur=prueba;
+    });
+    if(cur) lineas.push(cur);
+    return {px:min, peso, lineas};
+  };
+  const tWeb=ajustar(cfg.web || 'www.surframespa.com', 700, 38, 26);
+  const tSub=ajustar([m.numero, m.tipo].filter(Boolean).join('  ·  '), 400, 27, 21);
+
+  const yWeb=qrTop+ladoQR+24+tWeb.px;
+  const lhWeb=Math.round(tWeb.px*1.25), lhSub=Math.round(tSub.px*1.3);
+  const yWebFin=yWeb+(tWeb.lineas.length-1)*lhWeb;
+  const ySub=yWebFin+14+tSub.px;
+  const H=ySub+(tSub.lineas.length-1)*lhSub+46;
 
   canvas.width=W; canvas.height=H;
   const cx=canvas.getContext('2d');
@@ -2923,8 +2952,9 @@ async function dibujarBadgeQR(canvas, m){
   if(imgLogo){
     cx.drawImage(imgLogo, Math.round((W-logoW)/2), MARGEN, logoW, logoH);
   }else{
-    cx.fillStyle='#111'; cx.font='800 46px '+FUENTE;
-    cx.fillText(String(cfg.razon||'SURFRAME').toUpperCase(), W/2, MARGEN+46);
+    const tRaz=ajustar(String(cfg.razon||'SURFRAME').toUpperCase(), 800, 46, 26);
+    cx.fillStyle='#111'; cx.font=`800 ${tRaz.px}px ${FUENTE}`;
+    cx.fillText(tRaz.lineas.join(' '), W/2, MARGEN+46, ANCHO_TXT);
   }
 
   /* Los módulos van en coordenadas enteras: media pixel de antialiasing basta
@@ -2934,12 +2964,10 @@ async function dibujarBadgeQR(canvas, m){
   for(let r=0;r<n;r++) for(let c=0;c<n;c++)
     if(qr.isDark(r,c)) cx.fillRect(x0+c*celda, qrTop+r*celda, celda, celda);
 
-  let ty=qrTop+ladoQR+62;
-  cx.fillStyle='#111'; cx.font='700 38px '+FUENTE;
-  cx.fillText(cfg.web || 'www.surframespa.com', W/2, ty);
-  ty+=42;
-  cx.fillStyle='#777'; cx.font='400 27px '+FUENTE;
-  cx.fillText(`${m.numero}  ·  ${m.tipo||''}`.trim(), W/2, ty);
+  cx.fillStyle='#111'; cx.font=`700 ${tWeb.px}px ${FUENTE}`;
+  tWeb.lineas.forEach((l,i)=>cx.fillText(l, W/2, yWeb+i*lhWeb, ANCHO_TXT));
+  cx.fillStyle='#777'; cx.font=`400 ${tSub.px}px ${FUENTE}`;
+  tSub.lineas.forEach((l,i)=>cx.fillText(l, W/2, ySub+i*lhSub, ANCHO_TXT));
   return url;
 }
 
