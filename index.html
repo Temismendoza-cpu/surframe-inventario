@@ -180,6 +180,9 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .ficha-img{border:2px solid #111;border-radius:10px;overflow:hidden;background:#fff}
 .ficha-img img{width:100%;display:block}
 .ficha-txt{font-size:13.5px;line-height:1.55;color:#333;white-space:pre-line}
+.ficha-btn{display:inline-flex;align-items:center;gap:7px;background:#111;color:#fff;border-radius:8px;
+  padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;line-height:1.2}
+.ficha-btn:hover{background:#333}
 .ficha-pie{display:grid;grid-template-columns:1.3fr 1fr 1fr;border-top:2px solid #111;font-size:12px;color:#555;line-height:1.5}
 .ficha-pie > div{padding:14px 18px;border-right:1px solid #eee}
 .ficha-pie > div:last-child{border-right:none}
@@ -1268,6 +1271,10 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <div class="form-group"><label>RPM</label><input id="mq-rpm" placeholder="Ej: 40 · Eje hueco 20 mm"></div>
         <div class="form-group full"><label>Componentes principales</label>
           <textarea id="mq-comp" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Ej: Estructura, banda modular, sprockets, motorreductor, descansos…"></textarea>
+        </div>
+        <div class="form-group full"><label>Ficha técnica del motor (enlace)</label>
+          <input id="mq-motorficha" type="url" inputmode="url" placeholder="Ej: https://documents.mrosupply.com/…/ficha-motor.pdf">
+          <small style="color:#aaa;font-size:11px;margin-top:4px">Se muestra como un botón en la ficha publicada.</small>
         </div>
       </div>
     </div>
@@ -2586,6 +2593,23 @@ function populateMaqClientes(){
   sel.value=cur;
 }
 
+/* Enlaces de la ficha: se completa el https:// y se descarta cualquier otro
+   esquema, porque el enlace se publica tal cual en la página de la ficha. */
+function normUrl(txt){
+  const t=String(txt||'').trim();
+  if(!t) return '';
+  let u=t;
+  if(!/^https?:\/\//i.test(t)){
+    const m=t.match(/^([^:/?#]+):/);
+    if(m && !m[1].includes('.')) return '';   // javascript:, ftp:, mailto:… se descartan
+    u='https://'+t;                            // pegar solo el dominio también sirve
+  }
+  try{
+    const p=new URL(u);
+    return (p.protocol==='http:'||p.protocol==='https:') ? p.href : '';
+  }catch(e){ return ''; }
+}
+
 /* Año de fabricación (las primeras fichas guardaban la fecha completa) */
 function anioDe(m){ return String(m.anio || (m.fecha ? String(m.fecha).slice(0,4) : '')); }
 /* N° de documento: el escrito o SF-FT-<n° de OT><año>, como en la ficha modelo */
@@ -2737,6 +2761,7 @@ function openMaquinaModal(id=null){
   set('mq-capacidad', m&&m.capacidad);
   set('mq-motor', m&&m.motor); set('mq-potencia', m&&m.potencia); set('mq-rpm', m&&m.rpm);
   set('mq-comp', m&&m.componentes);
+  set('mq-motorficha', m&&m.motorFicha);
   set('mq-oper', m&&m.condiciones); set('mq-limp', m&&m.limpieza);
   set('mq-elab', m&&m.elaboro); set('mq-revi', m&&m.reviso); set('mq-apro', m&&m.aprobo);
   llenarClientesMaq();
@@ -2786,7 +2811,7 @@ async function saveMaquina(conQR){
     descripcion: v('mq-desc'), material: v('mq-material'),
     ancho: v('mq-ancho'), largo: v('mq-largo'), alto: v('mq-alto'),
     capacidad: v('mq-capacidad'), motor: v('mq-motor'), potencia: v('mq-potencia'), rpm: v('mq-rpm'),
-    componentes: v('mq-comp'),
+    componentes: v('mq-comp'), motorFicha: normUrl(v('mq-motorficha')),
     repuestos: leerFilas('#mq-rep', {comp:'.r-comp', cant:'.r-cant', espec:'.r-esp'}),
     mantencion: leerFilas('#mq-mant', {comp:'.m-comp', act:'.m-act', frec:'.m-frec', crit:'.m-crit'}),
     condiciones: v('mq-oper'), limpieza: v('mq-limp'),
@@ -3106,6 +3131,8 @@ function renderFicha(m, cfg, logo, imagen){
     fila('Capacidad arrastre', esc(m.capacidad)),
     fila('Accionamiento', acc.length ? `<div class="ficha-dims">${acc.join('')}</div>` : ''),
     fila('Componentes principales', esc(m.componentes)),
+    fila('Ficha técnica del motor', m.motorFicha && /^https?:\/\//i.test(m.motorFicha)
+      ? `<a class="ficha-btn" href="${esc(m.motorFicha)}" target="_blank" rel="noopener noreferrer">📄 Ver ficha del motor</a>` : ''),
     fila('Peso', esc(m.peso)),
     fila('Alimentación eléctrica', esc(m.voltaje)),
     ...toArr(m.specs).filter(sp=>sp.k&&sp.v).map(sp=>fila(sp.k, esc(sp.v)))
