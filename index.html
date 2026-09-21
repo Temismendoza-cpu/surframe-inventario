@@ -377,6 +377,23 @@ tbody td{padding:10px 14px;vertical-align:middle}
   .tbl-wrap tbody td[data-lbl="Acciones"] .btn,
   .tbl-wrap tbody td[data-lbl="Egreso"] .btn,
   .tbl-wrap tbody td[data-lbl="PDF"] .btn{flex:1 1 auto;margin-left:0 !important}
+
+  /* ── Ficha plegada: se ve solo el resumen y el resto se abre al tocarla ── */
+  .tbl-wrap table.plegable tbody tr{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .tbl-wrap table.plegable tbody tr.abierta{border-color:#d4d4d4;box-shadow:0 2px 7px rgba(0,0,0,.07)}
+  .tbl-wrap table.plegable tbody td.det{display:none}
+  .tbl-wrap table.plegable tbody tr.abierta td.det{display:flex}
+  /* Las celdas sin dato siguen ocultas aunque la ficha esté abierta */
+  .tbl-wrap table.plegable tbody tr.abierta td.det.sin-dato{display:none}
+  /* Flecha que avisa que la ficha se despliega; gira al abrirla */
+  .tbl-wrap table.plegable tbody td:first-child::after{
+    content:'';flex:0 0 auto;align-self:center;width:7px;height:7px;margin-left:12px;
+    border-right:2px solid #bbb;border-bottom:2px solid #bbb;
+    transform:translateY(-2px) rotate(45deg);transition:transform .18s
+  }
+  .tbl-wrap table.plegable tbody tr.abierta td:first-child::after{
+    transform:translateY(1px) rotate(-135deg)
+  }
   .empty{background:#fff;border:1px solid #e4e4e4;border-radius:12px;padding:2.2rem 1rem}
 
   /* Ventanas emergentes: hoja que sube desde abajo, más cómoda de alcanzar */
@@ -509,9 +526,10 @@ tbody td{padding:10px 14px;vertical-align:middle}
       </div>
       <div class="tbl-wrap">
         <table>
+          <!-- data-res marca las columnas que se ven con la ficha plegada en móvil -->
           <thead><tr>
-            <th>Código</th><th>Nombre</th><th>Modelo</th>
-            <th>Material</th><th>Dimensiones</th><th>Cant.</th><th>Unidad</th><th>Estado</th>
+            <th data-res>Código</th><th data-res>Nombre</th><th>Modelo</th>
+            <th>Material</th><th>Dimensiones</th><th data-res>Cant.</th><th>Unidad</th><th data-res>Estado</th>
           </tr></thead>
           <tbody id="tbl-body"></tbody>
         </table>
@@ -537,8 +555,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
       <div class="tbl-wrap">
         <table>
           <thead><tr>
-            <th>Código</th><th>Nombre</th><th>Categoría</th>
-            <th>Cant.</th><th>Unidad</th><th>Estado</th><th>Egreso</th>
+            <th data-res>Código</th><th data-res>Nombre</th><th>Categoría</th>
+            <th data-res>Cant.</th><th>Unidad</th><th data-res>Estado</th><th>Egreso</th>
           </tr></thead>
           <tbody id="ins-tbl-body"></tbody>
         </table>
@@ -635,8 +653,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>Código</th><th>Nombre</th><th>Modelo</th>
-              <th>Dimensiones</th><th>Cant.</th><th>Mín.</th><th>Precio</th><th>Acciones</th>
+              <th data-res>Código</th><th data-res>Nombre</th><th>Modelo</th>
+              <th>Dimensiones</th><th data-res>Cant.</th><th>Mín.</th><th>Precio</th><th>Acciones</th>
             </tr></thead>
             <tbody id="adm-tbl"></tbody>
           </table>
@@ -655,8 +673,8 @@ tbody td{padding:10px 14px;vertical-align:middle}
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>Código</th><th>Nombre</th><th>Categoría</th>
-              <th>Cant.</th><th>Mín.</th><th>Precio</th><th>Acciones</th>
+              <th data-res>Código</th><th data-res>Nombre</th><th>Categoría</th>
+              <th data-res>Cant.</th><th>Mín.</th><th>Precio</th><th>Acciones</th>
             </tr></thead>
             <tbody id="adm-ins-tbl"></tbody>
           </table>
@@ -4482,14 +4500,32 @@ async function confirmMov(){
 
 /* ═══ ETIQUETAS DE COLUMNA (vista de fichas en móvil) ═══
    Copia el título de cada columna a su celda (data-lbl). En pantallas chicas el CSS
-   convierte cada fila en una ficha y muestra ese título junto al dato. */
+   convierte cada fila en una ficha y muestra ese título junto al dato.
+
+   Si el encabezado marca columnas con data-res, esas son el resumen: la ficha se
+   pliega y solo las muestra; el resto (clase .det) aparece al tocarla. */
+
+/* Cada ficha se reconoce por su primera celda (el código), así se recuerda cuáles
+   estaban desplegadas cuando la tabla se vuelve a pintar. */
+function claveFicha(tr){ return (tr.firstElementChild?.textContent||'').trim(); }
+function fichasAbiertas(tabla){
+  if(!tabla.__abiertas) tabla.__abiertas=new Set();
+  return tabla.__abiertas;
+}
+
 function etiquetarCeldas(tbody){
   const tabla=tbody.closest('table');
   if(!tabla) return;
-  const titulos=[...tabla.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+  const ths=[...tabla.querySelectorAll('thead th')];
+  const titulos=ths.map(th=>th.textContent.trim());
+  const resumen=ths.map(th=>th.hasAttribute('data-res'));
+  const plegable=resumen.some(Boolean);
+  tabla.classList.toggle('plegable', plegable);
+  const abiertas=plegable ? fichasAbiertas(tabla) : null;
   tbody.querySelectorAll('tr').forEach(tr=>{
     [...tr.children].forEach((td,i)=>{
       if(titulos[i]) td.setAttribute('data-lbl', titulos[i]);
+      if(plegable) td.classList.toggle('det', !resumen[i]);
       /* El contenido va dentro de un span: así el dato se mantiene junto al lado
          del título aunque tenga saltos de línea (nombre + categoría, por ejemplo). */
       let v=td.firstElementChild;
@@ -4500,12 +4536,26 @@ function etiquetarCeldas(tbody){
       }
       td.classList.toggle('sin-dato', !td.textContent.trim() && !td.querySelector('button,img,svg'));
     });
+    if(plegable) tr.classList.toggle('abierta', abiertas.has(claveFicha(tr)));
   });
 }
 document.querySelectorAll('.tbl-wrap tbody').forEach(tb=>{
   etiquetarCeldas(tb);
   /* Las tablas se repintan con innerHTML: al cambiar los hijos se vuelven a etiquetar */
   new MutationObserver(()=>etiquetarCeldas(tb)).observe(tb,{childList:true});
+});
+
+/* Tocar una ficha la despliega o la vuelve a plegar. Solo en pantallas chicas: en
+   el escritorio la tabla ya muestra todas las columnas. Los botones de dentro de la
+   ficha (Egreso, Editar, PDF…) siguen haciendo lo suyo sin plegarla. */
+document.addEventListener('click', e=>{
+  if(!window.matchMedia('(max-width:760px)').matches) return;
+  const tr=e.target.closest('.tbl-wrap table.plegable tbody tr');
+  if(!tr) return;
+  if(e.target.closest('button,a,input,select,textarea,label')) return;
+  const abiertas=fichasAbiertas(tr.closest('table'));
+  const clave=claveFicha(tr);
+  if(tr.classList.toggle('abierta')) abiertas.add(clave); else abiertas.delete(clave);
 });
 
 /* ═══ MODAL HELPERS ═══ */
