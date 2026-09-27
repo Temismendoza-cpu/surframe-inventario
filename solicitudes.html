@@ -85,12 +85,14 @@ main{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
 .epp{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
 .epp button{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px 6px 10px;cursor:pointer;font-family:inherit;
   display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12.5px;color:#222;transition:border-color .12s,background .12s}
-.epp button span{font-size:24px;line-height:1}
+.epp button span{display:flex;line-height:0;color:#111}
+.epp button.on span{color:#fff}
 .epp button:hover{border-color:#111}
 .epp button.on{background:#111;color:#fff;border-color:#111}
 .epp-ctx{display:none;margin-top:12px;background:#fafafa;border:1px solid #eee;border-radius:10px;padding:12px}
 .epp-ctx.open{display:block}
 .epp-ctx h4{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.epp-ctx h4 span{display:inline-flex;align-items:center;gap:7px}
 
 .cat-row{display:grid;grid-template-columns:minmax(0,1fr) 90px auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0}
 .cat-row:last-child{border-bottom:none}
@@ -364,19 +366,35 @@ let currentUser=null, items=[], ultima=null, eppActual=null;
 /* Botones de pedido rápido. `cats` son las categorías del modal de insumos
    del inventario, así cada botón muestra lo que hay en bodega. */
 const EPP = [
-  {ico:'🧤', nom:'Guantes',              cats:['Guantes']},
-  {ico:'🛡️', nom:'Careta facial',        cats:['Careta facial']},
-  {ico:'🥽', nom:'Lentes de seguridad',  cats:['Lentes de seguridad']},
-  {ico:'🎧', nom:'Protección auditiva',  cats:['Protección auditiva']},
-  {ico:'😷', nom:'Mascarilla / respirador', cats:['Mascarilla / Respirador']},
-  {ico:'⛑️', nom:'Casco',                cats:['Casco']},
-  {ico:'👢', nom:'Botas de seguridad',   cats:['Botas de seguridad']},
-  {ico:'🥼', nom:'Overol / ropa',        cats:['Overol','Polera / Buzo','Delantal']},
-  {ico:'🦺', nom:'Chaleco reflectante',  cats:['Chaleco']},
-  {ico:'🪢', nom:'Arnés',                cats:['Arnés']},
-  {ico:'💿', nom:'Discos y lijas',       cats:['Disco de corte','Disco flap','Disco de desbaste','Disco diamantado','Lija','Grata']},
-  {ico:'🔥', nom:'Soldadura',            cats:['Electrodo','Alambre MIG','Gas / Tungsteno']}
+  {ico:'guantes', nom:'Guantes',              cats:['Guantes']},
+  {ico:'careta', nom:'Careta facial',        cats:['Careta facial']},
+  {ico:'lentes', nom:'Lentes de seguridad',  cats:['Lentes de seguridad']},
+  {ico:'auditiva', nom:'Protección auditiva',  cats:['Protección auditiva']},
+  {ico:'mascarilla', nom:'Mascarilla / respirador', cats:['Mascarilla / Respirador']},
+  {ico:'casco', nom:'Casco',                cats:['Casco']},
+  {ico:'botas', nom:'Botas de seguridad',   cats:['Botas de seguridad']},
+  {ico:'overol', nom:'Overol / ropa',        cats:['Overol','Polera / Buzo','Delantal']},
+  {ico:'chaleco', nom:'Chaleco reflectante',  cats:['Chaleco']},
+  {ico:'arnes', nom:'Arnés',                cats:['Arnés']},
+  {ico:'discos', nom:'Discos y lijas',       cats:['Disco de corte','Disco flap','Disco de desbaste','Disco diamantado','Lija','Grata']},
+  {ico:'soldadura', nom:'Soldadura',            cats:['Electrodo','Alambre MIG','Gas / Tungsteno']}
 ];
+
+const ICONOS={
+  guantes:'<path d="M7 21v-5l-2.6-3.1a1.4 1.4 0 0 1 2.1-1.8L8 12.5V5a1.5 1.5 0 0 1 3 0v6"/><path d="M11 4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M17 8a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-3 5.2V21"/><path d="M7 21h10"/>',
+  careta:'<path d="M4 7h16"/><path d="M4 7c2-2 5-3 8-3s6 1 8 3"/><path d="M5 7v8c0 3.3 3.1 6 7 6s7-2.7 7-6V7"/><path d="M9 11h6"/>',
+  lentes:'<path d="M3 10h18"/><path d="M3 10v3a3 3 0 0 0 3 3h2a3 3 0 0 0 3-2l.5-1h1l.5 1a3 3 0 0 0 3 2h2a3 3 0 0 0 3-3v-3"/>',
+  auditiva:'<path d="M6 14v-3a6 6 0 0 1 12 0v3"/><rect x="3.5" y="13" width="4.5" height="7.5" rx="2"/><rect x="16" y="13" width="4.5" height="7.5" rx="2"/>',
+  mascarilla:'<path d="M5 9c3-1 4.5-2 7-2s4 1 7 2v4c0 3.3-3.1 6-7 6s-7-2.7-7-6z"/><path d="M2 9.5c1.2 0 2.2.4 3 1"/><path d="M22 9.5c-1.2 0-2.2.4-3 1"/><path d="M9 11.5h6"/><path d="M9.5 14.5h5"/>',
+  casco:'<path d="M2.5 18.5h19"/><path d="M5 18.5V15a7 7 0 0 1 14 0v3.5"/><path d="M10 8.3V6h4v2.3"/><path d="M12 8v10.5"/>',
+  botas:'<path d="M6 3h7v9l5.3 1.9A2.5 2.5 0 0 1 20 16.3V20H6z"/><path d="M6 17h14"/><path d="M6 7h7"/>',
+  overol:'<path d="M9 3l3 2 3-2 5 3-2 4-2-1v12H8V9l-2 1-2-4z"/><path d="M12 5v16"/>',
+  chaleco:'<path d="M8 3l4 4 4-4 3 2v15h-5v-6h-4v6H5V5z"/><path d="M5 11h4.5"/><path d="M14.5 11H19"/><path d="M5 15h5"/><path d="M14 15h5"/>',
+  arnes:'<path d="M8 3v6l4 3 4-3V3"/><circle cx="12" cy="13.5" r="1.5"/><path d="M12 15v1.5"/><path d="M6 21l6-4.5 6 4.5"/><path d="M8 9h8"/>',
+  discos:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 5.5l-2 3"/><path d="M19 9.5l-3 1"/>',
+  soldadura:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.5 1 2.5 2 3 0-3 .5-5.5.5-8z"/>'
+};
+function icono(k,t){ return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[k]}</svg>`; }
 
 /* ── Logo SVG (el mismo engranaje del inventario) ── */
 function logoSvg(){
@@ -479,14 +497,14 @@ function prio(){ return document.querySelector('#s-prio button.on').dataset.v; }
 /* ── Pedido rápido ── */
 function renderEpp(){
   document.getElementById('epp').innerHTML=EPP.map((e,i)=>
-    `<button type="button" id="epp-${i}" onclick="abrirEpp(${i})"><span>${e.ico}</span>${esc(e.nom)}</button>`).join('');
+    `<button type="button" id="epp-${i}" onclick="abrirEpp(${i})"><span>${icono(e.ico,26)}</span>${esc(e.nom)}</button>`).join('');
 }
 function abrirEpp(i){
   if(eppActual===i){ cerrarEpp(); return; }
   eppActual=i;
   const e=EPP[i];
   document.querySelectorAll('#epp button').forEach((b,j)=>b.classList.toggle('on',j===i));
-  document.getElementById('epp-tit').textContent=e.ico+' '+e.nom;
+  document.getElementById('epp-tit').innerHTML=icono(e.ico,18)+' '+esc(e.nom);
   const lista=INS.filter(x=>e.cats.includes(x.categoria)).sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
   document.getElementById('epp-lista').innerHTML = lista.length
     ? lista.map(filaCatalogo).join('')
