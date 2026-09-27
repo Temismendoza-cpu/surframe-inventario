@@ -169,7 +169,7 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
 .embed header .hlogo,.embed header .huser,.embed #nav-inv{display:none}
 .embed nav{order:0;width:auto}
 .embed main{padding:1.2rem 1.5rem 2rem}
-.embed #screen-login{min-height:100%;padding:1.5rem}
+.embed #screen-login{display:none;min-height:100%;padding:1.5rem}
 @media(max-width:720px){
   .embed header{padding:8px .8rem}
   .embed main{padding:.8rem .6rem 1.5rem}
@@ -441,6 +441,22 @@ function avisarPadre(tipo){ try{ if(EMBED && window.parent!==window) window.pare
 
 /* ═══════════════ ARRANQUE / SESIÓN ═══════════════ */
 async function init(){
+  // Dentro del inventario: usa la sesión y los datos del inventario, sin login
+  if(EMBED){
+    let ctx=null;
+    try{ ctx=window.parent.sfContexto && window.parent.sfContexto(); }catch(e){}
+    if(ctx && ctx.user){
+      USERS=toArr(ctx.users); INS=toArr(ctx.ins); CONFIG=ctx.config||{}; currentUser=ctx.user;
+      startApp();
+      // Refresca stock y correlativo en segundo plano sin borrar lo que se está llenando
+      Promise.all([fbGet('insumos'),fbGet('config')]).then(([i,c])=>{
+        INS=toArr(i); if(c) CONFIG=c;
+        document.getElementById('s-num').textContent='N° '+numSolicitud(CONFIG.nextSolicitud);
+      }).catch(()=>{});
+      return;
+    }
+    document.getElementById('screen-login').style.display='flex';
+  }
   try{
     const [u,i,c]=await Promise.all([fbGet('users'),fbGet('insumos'),fbGet('config')]);
     USERS=toArr(u); INS=toArr(i); CONFIG=c||{};

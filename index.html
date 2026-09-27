@@ -4774,9 +4774,14 @@ async function init(){
 init();
 
 /* ═══ WIDGET SOLICITUD DE INSUMOS ═══ */
-let _solStockCambio=false;
+let _solStockCambio=false, _solUserId=null;
+/* El widget toma de aquí la sesión y los datos ya cargados: no vuelve a pedir login */
+window.sfContexto=()=>({user:currentUser, users:USERS, ins:INS, config:CONFIG});
 function abrirSolicitudes(){
   const fr=document.getElementById('sol-frame');
+  const uid=currentUser?currentUser.id:null;
+  if(fr.getAttribute('src') && _solUserId!==uid){ fr.removeAttribute('src'); document.getElementById('sol-cargando').style.display=''; }
+  _solUserId=uid;
   if(!fr.getAttribute('src')){
     fr.addEventListener('load',()=>{ document.getElementById('sol-cargando').style.display='none'; },{once:true});
     fr.setAttribute('src','solicitudes.html?embed=1');
