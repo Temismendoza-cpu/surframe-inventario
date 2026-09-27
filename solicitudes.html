@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#111111">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Surframe – Solicitud de insumos</title>
+<script>if(/[?&]embed\b/.test(location.search)) document.documentElement.classList.add("embed");</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--r:8px;--danger:#c0392b;--warn:#e67e22;--ok:#219150}
@@ -161,6 +162,18 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
   .kv{grid-template-columns:110px 1fr}
   #sync{bottom:calc(16px + env(safe-area-inset-bottom))}
 }
+
+/* ── Modo widget (abierto dentro del inventario) ── */
+.embed body{background:#f7f7f7}
+.embed header{position:sticky;height:auto;min-height:0;padding:10px 1.5rem;border-bottom:1px solid #e4e4e4;justify-content:flex-start}
+.embed header .hlogo,.embed header .huser,.embed #nav-inv{display:none}
+.embed nav{order:0;width:auto}
+.embed main{padding:1.2rem 1.5rem 2rem}
+.embed #screen-login{min-height:100%;padding:1.5rem}
+@media(max-width:720px){
+  .embed header{padding:8px .8rem}
+  .embed main{padding:.8rem .6rem 1.5rem}
+}
 @media print{ body{display:none} }
 </style>
 </head>
@@ -199,7 +212,7 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
     <nav>
       <button id="nav-nueva" class="active" onclick="showPage('nueva')">Nueva solicitud</button>
       <button id="nav-hist" onclick="showPage('hist')">Solicitudes</button>
-      <a href="index.html">Inventario</a>
+      <a href="index.html" id="nav-inv">Inventario</a>
     </nav>
     <div class="huser">
       <span class="hname"><strong id="h-nombre"></strong></span>
@@ -421,6 +434,10 @@ async function fbPut(p,v){ const r=await fetch(`${FB_URL}/${p}.json`,{method:'PU
 async function fbPatch(p,v){ const r=await fetch(`${FB_URL}/${p}.json`,{method:'PATCH',body:JSON.stringify(v)}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
 function numSolicitud(n){ return 'SI-'+String(Number(n)||1).padStart(5,'0'); }
+
+/* Si el portal está abierto como widget dentro del inventario, le avisa cambios */
+const EMBED=document.documentElement.classList.contains('embed');
+function avisarPadre(tipo){ try{ if(EMBED && window.parent!==window) window.parent.postMessage({sf:tipo}, location.origin); }catch(e){} }
 
 /* ═══════════════ ARRANQUE / SESIÓN ═══════════════ */
 async function init(){
@@ -766,6 +783,7 @@ async function entregar(num){
                   items:its.map(i=>{ const c={...i}; if(c.insId==null) delete c.insId; return c; })};
     await fbPatch('solicitudes/'+num, cambio);
     Object.assign(s,cambio); INS=insFresh; hideSync();
+    avisarPadre('stock');
     renderHist(); verDet(num);
   }catch(e){
     hideSync(); err.textContent='Error al entregar: '+e.message; if(btn) btn.disabled=false;
@@ -955,6 +973,13 @@ function dibujarPDF(doc, s, copia){
   doc.setFontSize(7.5); doc.setTextColor(150); doc.setFont(undefined,'normal');
   doc.text('Documento interno de solicitud y entrega de insumos.', 105, 290, {align:'center'});
 }
+
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  const mo=document.getElementById('mo-det');
+  if(mo.classList.contains('open')){ closeMo('mo-det'); return; }
+  avisarPadre('cerrar');
+});
 
 init();
 </script>
