@@ -113,6 +113,15 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .lnk-plano:hover{background:#e6f1fb}
 .plano-box{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#fafafa;border:1px solid #eee;
   border-radius:8px;padding:9px 11px;min-height:42px}
+/* Lista de equipos que comparten un código QR (modal de máquina) */
+.grupo-box{border:1px solid #eee;border-radius:8px;background:#fafafa;max-height:190px;overflow:auto;padding:5px}
+.grupo-it{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:7px;font-size:13px;cursor:pointer}
+.grupo-it:hover{background:#f0f0f0}
+.grupo-it.on{background:#fff;border:1px solid #ddd}
+.grupo-it input{margin-top:2px;flex:0 0 auto}
+.grupo-it small{color:#999}
+.grupo-it small.av{color:#b8860b;display:block}
+.grupo-vacio{color:#bbb;font-size:13px;padding:10px 8px}
 .fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
 .foto-item{position:relative;border:1px solid #eee;border-radius:9px;overflow:hidden;background:#fafafa;aspect-ratio:4/3}
 .foto-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
@@ -183,6 +192,13 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .ficha-btn{display:inline-flex;align-items:center;gap:7px;background:#111;color:#fff;border-radius:8px;
   padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;line-height:1.2}
 .ficha-btn:hover{background:#333}
+.ficha-eq{background:#fafafa;border:1px solid #eee;border-radius:11px;padding:11px 13px;margin:0 0 18px}
+.ficha-eq-l{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#888;margin-bottom:9px}
+.ficha-eq-btns{display:flex;flex-wrap:wrap;gap:7px}
+.eq-btn{display:inline-block;background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px 13px;
+  font-size:13px;font-weight:600;color:#333;text-decoration:none;line-height:1.25}
+a.eq-btn:hover{border-color:#111;color:#111}
+.eq-btn.is-on{background:#111;border-color:#111;color:#fff}
 .ficha-pie{display:grid;grid-template-columns:1.3fr 1fr 1fr;border-top:2px solid #111;font-size:12px;color:#555;line-height:1.5}
 .ficha-pie > div{padding:14px 18px;border-right:1px solid #eee}
 .ficha-pie > div:last-child{border-right:none}
@@ -210,7 +226,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
   #screen-ficha{background:#fff;padding:0}
   .ficha-print{display:none}
   .ficha-card{border:none;border-radius:0;max-width:none}
-  .ficha-sec h3,.ficha-tbl th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ficha-sec h3,.ficha-tbl th,.eq-btn.is-on{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .ficha-vacia{max-width:420px;margin:14vh auto;background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:2rem;text-align:center;color:#777;font-size:14px}
 .up::placeholder{text-transform:none}
@@ -1358,6 +1374,25 @@ tbody td{padding:10px 14px;vertical-align:middle}
         </div>
         <div class="form-group full"><label>Limpieza</label>
           <textarea id="mq-limp" rows="3" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Ej: Realizar lavado con agua de consumo; no usar detergentes clorados ni ácidos…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Equipos del mismo código QR -->
+    <div style="margin-top:1.4rem;padding-top:1rem;border-top:1px solid #eee">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#111;display:block;margin-bottom:10px">Equipos en el mismo código QR</label>
+      <p style="font-size:12px;color:#888;margin:-4px 0 .9rem;line-height:1.45">
+        Al escanear el QR se abre esta ficha con un botón por cada equipo marcado, para pasar de uno a otro.
+        El enlace del código ya impreso no cambia.
+      </p>
+      <div class="form-grid">
+        <div class="form-group full"><label>Nombre del botón</label>
+          <input id="mq-alias" placeholder="Ej: Equipo transportador">
+          <small style="color:#aaa;font-size:11px;margin-top:4px">Si lo dejas vacío se usa el equipo (tipo de máquina).</small>
+        </div>
+        <div class="form-group full"><label>Otros equipos incluidos</label>
+          <input id="mq-grupo-q" placeholder="Buscar por OT, equipo o cliente…" oninput="renderGrupoLista()">
+          <div class="grupo-box" id="mq-grupo-list"></div>
         </div>
       </div>
     </div>
@@ -2669,6 +2704,69 @@ function docDe(m){
   return n ? 'SF-FT-'+String(n).padStart(2,'0')+anioDe(m) : '';
 }
 
+/* ── Equipos que comparten un mismo código QR ───────────────────────
+   Cada integrante guarda la lista completa del grupo (incluido él mismo), así
+   la ficha pública arma los botones sin consultar toda la base y el enlace del
+   código impreso sigue siendo el mismo. */
+function grupoDe(m){ return toArr(m&&m.equipos).filter(e=>e && e.id!=null); }
+function nombreEquipo(m){ return String(m.alias||'').trim() || m.tipo || ('OT '+m.numero); }
+
+let grupoSel = new Set();          // ids marcados en el modal de máquina
+
+function toggleGrupo(id, on){
+  if(on) grupoSel.add(Number(id)); else grupoSel.delete(Number(id));
+  renderGrupoLista();
+}
+
+function renderGrupoLista(){
+  const box=document.getElementById('mq-grupo-list');
+  if(!box) return;
+  const q=(document.getElementById('mq-grupo-q')?.value||'').toLowerCase().trim();
+  const lista=maqSorted().filter(m=>Number(m.id)!==Number(editMaquinaId)).filter(m=>
+    grupoSel.has(Number(m.id)) || !q ||
+    [m.numero,m.tipo,m.alias,m.cliente].join(' ').toLowerCase().includes(q));
+  box.innerHTML = lista.length
+    ? lista.slice(0,60).map(m=>{
+        const on=grupoSel.has(Number(m.id));
+        /* ¿pertenece a otro QR? avisa, porque al marcarla se la cambia de grupo */
+        const ajena=grupoDe(m).some(e=>Number(e.id)!==Number(m.id) &&
+          Number(e.id)!==Number(editMaquinaId) && !grupoSel.has(Number(e.id)));
+        return `<label class="grupo-it${on?' on':''}">
+          <input type="checkbox" ${on?'checked':''} onchange="toggleGrupo(${m.id}, this.checked)">
+          <span><strong>${esc(m.numero)}</strong> · ${esc(nombreEquipo(m))}
+            ${m.cliente?`<small>${esc(m.cliente)}</small>`:''}
+            ${ajena?'<small class="av">Ya está en otro código QR</small>':''}</span>
+        </label>`;
+      }).join('')
+    : `<div class="grupo-vacio">${q?'Sin resultados.':'No hay otras máquinas registradas.'}</div>`;
+}
+
+/* Guarda la lista en todos los integrantes y la quita de los que salieron, para
+   que ningún botón quede apuntando a una ficha que ya no es del grupo. */
+async function sincronizarGrupo(idPrincipal, idsSel){
+  const ids=[...new Set([Number(idPrincipal), ...idsSel.map(Number)])];
+  const miembros=ids.map(i=>MAQUINAS.find(x=>Number(x.id)===i)).filter(Boolean);
+  const lista = miembros.length>1
+    ? miembros.map(x=>({id:Number(x.id), numero:String(x.numero||''), nombre:nombreEquipo(x)}))
+    : [];
+  const nuevas=new Map();
+  miembros.forEach(x=>nuevas.set(Number(x.id), lista));
+  MAQUINAS.forEach(x=>{                       // grupos anteriores de los que salieron
+    const g=grupoDe(x);
+    if(nuevas.has(Number(x.id)) || !g.some(e=>ids.includes(Number(e.id)))) return;
+    const resto=g.filter(e=>!ids.includes(Number(e.id)));
+    nuevas.set(Number(x.id), resto.length>1 ? resto : []);
+  });
+  const self=MAQUINAS.find(x=>Number(x.id)===Number(idPrincipal));
+  if(!lista.length && nuevas.size===1 && !grupoDe(self).length) return;   // no había grupo ni lo hay
+  const rs=await Promise.all([...nuevas.entries()].map(([id,val])=>{
+    const x=MAQUINAS.find(y=>Number(y.id)===id);
+    if(x) x.equipos=val;
+    return fetch(`${FB_URL}/maquinas/${id}.json`,{method:'PATCH',body:JSON.stringify({equipos:val})});
+  }));
+  if(rs.some(r=>!r.ok)) throw new Error('la ficha se guardó, pero no se pudo actualizar la lista de equipos del código QR');
+}
+
 function renderMaquinasTable(){
   const tbody=document.getElementById('maq-tbl');
   const empty=document.getElementById('maq-empty');
@@ -2683,10 +2781,11 @@ function renderMaquinasTable(){
   empty.style.display='none';
   tbody.innerHTML=data.map(m=>{
     const sub=[m.modelo, m.tag?'TAG '+m.tag:''].filter(Boolean).join(' · ');
+    const grp=grupoDe(m).length;
     return `<tr>
     <td><code style="font-size:12px;font-weight:600">${m.numero}</code></td>
     <td style="color:#666;font-size:13px">${anioDe(m)||'—'}</td>
-    <td><strong>${m.tipo||'—'}</strong>${sub?`<br><small style="color:#aaa">${sub}</small>`:''}</td>
+    <td><strong>${m.tipo||'—'}</strong>${sub?`<br><small style="color:#aaa">${sub}</small>`:''}${grp>1?`<br><small style="color:#888">🔳 QR con ${grp} equipos</small>`:''}</td>
     <td style="color:#666;font-size:13px">${m.cliente||'—'}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="abrirFicha(${m.id})">👁 Ficha</button>
@@ -2812,6 +2911,7 @@ function openMaquinaModal(id=null){
   set('mq-motor', m&&m.motor); set('mq-potencia', m&&m.potencia); set('mq-rpm', m&&m.rpm);
   set('mq-comp', m&&m.componentes);
   set('mq-motorficha', m&&m.motorFicha);
+  set('mq-alias', m&&m.alias);
   set('mq-oper', m&&m.condiciones); set('mq-limp', m&&m.limpieza);
   set('mq-elab', m&&m.elaboro); set('mq-revi', m&&m.reviso); set('mq-apro', m&&m.aprobo);
   llenarClientesMaq();
@@ -2824,6 +2924,10 @@ function openMaquinaModal(id=null){
   toArr(m&&m.mantencion).forEach(r=>addMantRow(r));
   if(!toArr(m&&m.repuestos).length) addRepRow();
   if(!toArr(m&&m.mantencion).length) addMantRow();
+
+  const bq=document.getElementById('mq-grupo-q'); if(bq) bq.value='';
+  grupoSel=new Set(grupoDe(m).map(e=>Number(e.id)).filter(i=>i!==Number(id)));
+  renderGrupoLista();
 
   mqImg = (m && m.imagen) ? {estado:'actual', data:null} : {estado:'sin', data:null};
   renderImgMaqBox();
@@ -2862,6 +2966,7 @@ async function saveMaquina(conQR){
     ancho: v('mq-ancho'), largo: v('mq-largo'), alto: v('mq-alto'),
     capacidad: v('mq-capacidad'), motor: v('mq-motor'), potencia: v('mq-potencia'), rpm: v('mq-rpm'),
     componentes: v('mq-comp'), motorFicha: normUrl(v('mq-motorficha')),
+    alias: v('mq-alias'),
     repuestos: leerFilas('#mq-rep', {comp:'.r-comp', cant:'.r-cant', espec:'.r-esp'}),
     mantencion: leerFilas('#mq-mant', {comp:'.m-comp', act:'.m-act', frec:'.m-frec', crit:'.m-crit'}),
     condiciones: v('mq-oper'), limpieza: v('mq-limp'),
@@ -2890,6 +2995,8 @@ async function saveMaquina(conQR){
     if(guardada && mqImg.estado==='quitar'){
       await fetch(`${FB_URL}/maquinasImg/${guardada.id}.json`,{method:'DELETE'});
     }
+    /* Equipos que comparten el código QR */
+    if(guardada) await sincronizarGrupo(guardada.id, [...grupoSel]);
     /* El correlativo queda siempre por sobre la OT más alta cargada, aunque se
        hayan ingresado números antiguos o salteados. */
     const sig=Math.max((Number(CONFIG.nextOT)||1), otNumero(numero)+1, proxOT());
@@ -2911,6 +3018,16 @@ async function deleteMaquina(id){
   try{
     await apiPost({type:'maquina', action:'delete', id});
     if(m.imagen) fetch(`${FB_URL}/maquinasImg/${id}.json`,{method:'DELETE'}).catch(()=>{});
+    /* si compartía el QR con otros equipos, se saca de sus listas */
+    const resto=grupoDe(m).filter(e=>Number(e.id)!==Number(id));
+    if(grupoDe(m).length>1){
+      const val = resto.length>1 ? resto : [];
+      await Promise.all(resto.map(e=>{
+        const x=MAQUINAS.find(y=>Number(y.id)===Number(e.id));
+        if(x) x.equipos=val;
+        return fetch(`${FB_URL}/maquinas/${e.id}.json`,{method:'PATCH',body:JSON.stringify({equipos:val})});
+      }));
+    }
     populateMaqClientes(); renderMaquinasTable();
   }catch(e){ alert('Error al eliminar: '+e.message); }
 }
@@ -3219,6 +3336,18 @@ function renderFicha(m, cfg, logo, imagen){
   ].join('');
   const s05 = s05in ? `<div class="ficha-rows">${s05in}</div>` : '';
 
+  /* Varios equipos en un mismo QR: botones para pasar de una ficha a otra */
+  const grupo=grupoDe(m);
+  const eqBtns = grupo.length>1 ? `<div class="ficha-eq">
+      <div class="ficha-eq-l">Este código incluye ${grupo.length} equipos</div>
+      <div class="ficha-eq-btns">${grupo.map(e=>{
+        const txt=esc(e.nombre||e.numero||'Equipo');
+        return Number(e.id)===Number(m.id)
+          ? `<span class="eq-btn is-on">${txt}</span>`
+          : `<a class="eq-btn" href="#ficha=${Number(e.id)}">${txt}</a>`;
+      }).join('')}</div>
+    </div>` : '';
+
   const sub=[m.numero, m.modelo?'Modelo '+m.modelo:'', anio?'Año '+anio:''].filter(Boolean).map(esc).join(' · ');
   document.title=`Ficha técnica · ${m.numero} · ${cfg.razon||'Surframe'}`;
   document.getElementById('screen-ficha').innerHTML=`
@@ -3238,6 +3367,7 @@ function renderFicha(m, cfg, logo, imagen){
       <div class="ficha-body">
         <div class="ficha-maq">${esc(m.tipo||'Equipo')}</div>
         <div class="ficha-ot">${sub}</div>
+        ${eqBtns}
         ${seccion('01','Identificación del equipo', s01)}
         ${seccion('02','Descripción y especificaciones técnicas', s02)}
         ${seccion('03','Repuestos y componentes críticos', s03)}
@@ -3278,6 +3408,7 @@ async function mostrarFichaPublica(id){
   document.getElementById('screen-login').style.display='none';
   cont.style.display='block';
   cont.innerHTML='<div class="ficha-vacia">Cargando ficha técnica…</div>';
+  window.scrollTo(0,0);
   try{
     const [rm, rc]=await Promise.all([
       fetch(`${FB_URL}/maquinas/${id}.json`),
@@ -3287,6 +3418,7 @@ async function mostrarFichaPublica(id){
     const m=await rm.json();
     const cfg=(await rc.json()) || {};
     if(!m){ cont.innerHTML='<div class="ficha-vacia">No se encontró la ficha técnica de esta máquina.</div>'; return; }
+    if(m.id==null) m.id=Number(id);
     CONFIG=cfg;
     let imagen='';
     if(m.imagen){                    // la imagen es opcional: si falla, la ficha se muestra igual
@@ -4745,7 +4877,12 @@ async function init(){
   /* El QR de una máquina abre la ficha pública: no pide sesión ni descarga
      el resto de la base. */
   const idFicha=fichaIdDeHash();
-  if(idFicha){ mostrarFichaPublica(idFicha); return; }
+  if(idFicha){
+    /* los botones de equipos del mismo QR solo cambian el #ficha= */
+    window.addEventListener('hashchange', ()=>{ const i=fichaIdDeHash(); if(i) mostrarFichaPublica(i); });
+    mostrarFichaPublica(idFicha);
+    return;
+  }
   const info=document.getElementById('l-info');
   const btn=document.getElementById('l-btn');
   if(FB_URL.indexOf('__FIREBASE') >= 0){
