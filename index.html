@@ -192,13 +192,21 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .ficha-btn{display:inline-flex;align-items:center;gap:7px;background:#111;color:#fff;border-radius:8px;
   padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;line-height:1.2}
 .ficha-btn:hover{background:#333}
-.ficha-eq{background:#fafafa;border:1px solid #eee;border-radius:11px;padding:11px 13px;margin:0 0 18px}
+.ficha-eq{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:12px 13px;margin:0 0 18px}
 .ficha-eq-l{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#888;margin-bottom:9px}
-.ficha-eq-btns{display:flex;flex-wrap:wrap;gap:7px}
-.eq-btn{display:inline-block;background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px 13px;
-  font-size:13px;font-weight:600;color:#333;text-decoration:none;line-height:1.25}
-a.eq-btn:hover{border-color:#111;color:#111}
-.eq-btn.is-on{background:#111;border-color:#111;color:#fff}
+.ficha-eq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(218px,1fr));gap:9px}
+.eq-card{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #e2e2e2;border-radius:11px;
+  padding:11px 13px;text-decoration:none;color:#111;transition:border-color .15s,box-shadow .15s,transform .15s}
+a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transform:translateY(-1px)}
+.eq-n{flex:0 0 auto;width:28px;height:28px;border-radius:8px;background:#f0f0f0;color:#777;font-size:11px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:.3px}
+.eq-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.eq-txt strong{font-size:13.5px;font-weight:700;line-height:1.25}
+.eq-txt small{font-size:11px;color:#999}
+.eq-go{flex:0 0 auto;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#888;white-space:nowrap}
+.eq-card.is-on{background:#111;border-color:#111;color:#fff}
+.eq-card.is-on .eq-n{background:rgba(255,255,255,.17);color:#fff}
+.eq-card.is-on .eq-txt small,.eq-card.is-on .eq-go{color:rgba(255,255,255,.72)}
 .ficha-pie{display:grid;grid-template-columns:1.3fr 1fr 1fr;border-top:2px solid #111;font-size:12px;color:#555;line-height:1.5}
 .ficha-pie > div{padding:14px 18px;border-right:1px solid #eee}
 .ficha-pie > div:last-child{border-right:none}
@@ -226,7 +234,7 @@ a.eq-btn:hover{border-color:#111;color:#111}
   #screen-ficha{background:#fff;padding:0}
   .ficha-print{display:none}
   .ficha-card{border:none;border-radius:0;max-width:none}
-  .ficha-sec h3,.ficha-tbl th,.eq-btn.is-on{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ficha-sec h3,.ficha-tbl th,.eq-card.is-on,.eq-card.is-on .eq-n{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .ficha-vacia{max-width:420px;margin:14vh auto;background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:2rem;text-align:center;color:#777;font-size:14px}
 .up::placeholder{text-transform:none}
@@ -3336,15 +3344,21 @@ function renderFicha(m, cfg, logo, imagen){
   ].join('');
   const s05 = s05in ? `<div class="ficha-rows">${s05in}</div>` : '';
 
-  /* Varios equipos en un mismo QR: botones para pasar de una ficha a otra */
-  const grupo=grupoDe(m);
+  /* Varios equipos en un mismo QR: una tarjeta por equipo, la actual destacada */
+  /* orden estable por N° de OT, sin importar desde cuál equipo se guardó el grupo */
+  const grupo=grupoDe(m).slice().sort((a,b)=>
+    String(a.numero||'').localeCompare(String(b.numero||''),'es',{numeric:true}));
   const eqBtns = grupo.length>1 ? `<div class="ficha-eq">
       <div class="ficha-eq-l">Este código incluye ${grupo.length} equipos</div>
-      <div class="ficha-eq-btns">${grupo.map(e=>{
-        const txt=esc(e.nombre||e.numero||'Equipo');
-        return Number(e.id)===Number(m.id)
-          ? `<span class="eq-btn is-on">${txt}</span>`
-          : `<a class="eq-btn" href="#ficha=${Number(e.id)}">${txt}</a>`;
+      <div class="ficha-eq-grid">${grupo.map((e,i)=>{
+        const act=Number(e.id)===Number(m.id);
+        const cuerpo=`<span class="eq-n">${String(i+1).padStart(2,'0')}</span>
+          <span class="eq-txt"><strong>${esc(e.nombre||e.numero||'Equipo')}</strong>
+            <small>${esc(e.numero||'')}</small></span>
+          <span class="eq-go">${act?'Viendo':'Ver ficha ›'}</span>`;
+        return act
+          ? `<div class="eq-card is-on" aria-current="page">${cuerpo}</div>`
+          : `<a class="eq-card" href="#ficha=${Number(e.id)}">${cuerpo}</a>`;
       }).join('')}</div>
     </div>` : '';
 
