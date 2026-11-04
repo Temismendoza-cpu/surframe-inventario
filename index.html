@@ -1238,6 +1238,15 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
       <div class="form-group full"><label>Notas</label>
         <textarea id="mt-not" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Material que corta, grado, calibración, proveedor…"></textarea>
       </div>
+      <div class="form-group full">
+        <label>Fotos de respaldo</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mt-fotos-file').click()">📷 Agregar fotos</button>
+          <span id="mt-fotos-info" style="font-size:12px;color:#999">Se comprimen antes de subir.</span>
+        </div>
+        <input type="file" id="mt-fotos-file" accept="image/*" multiple style="display:none" onchange="agregarFotosTorForm(event)">
+        <div id="mt-fotos" class="fotos-grid" style="margin-top:10px"></div>
+      </div>
     </div>
     <div class="modal-err" id="mt-err"></div>
     <div class="modal-actions">
@@ -1526,6 +1535,18 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
     <input type="file" id="fg-file" accept="image/*" multiple style="display:none" onchange="subirFotosGuia(event)">
     <div class="modal-err" id="fg-err"></div>
     <div class="modal-actions" id="fg-actions"></div>
+  </div>
+</div>
+
+<!-- ════ MODAL FOTOS DE UN ÍTEM DE TORNERÍA ════ -->
+<div class="overlay" id="mo-tor-fotos">
+  <div class="modal" style="max-width:640px">
+    <h2>Fotos de respaldo</h2>
+    <div id="tf-sub" style="font-size:13px;color:#888;margin:-6px 0 12px"></div>
+    <div id="tf-grid" class="fotos-grid"></div>
+    <input type="file" id="tf-file" accept="image/*" multiple style="display:none" onchange="subirFotosTorGaleria(event)">
+    <div class="modal-err" id="tf-err"></div>
+    <div class="modal-actions" id="tf-actions"></div>
   </div>
 </div>
 
@@ -2393,6 +2414,7 @@ function renderTorTable(){
     <td style="color:#666;font-size:12px">${esc(d.condicion)}</td>
     <td>${stockBadge(d)}</td>
     <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" title="Fotos de respaldo" onclick="openFotosTor(${d.id})" style="margin-right:3px${Number(d.fotos)?'':';opacity:.55'}">📷${Number(d.fotos)?' '+Number(d.fotos):''}</button>
       <button class="btn btn-in btn-sm" onclick="openMov('torneria',${d.id},'in')">＋</button>
       <button class="btn btn-out btn-sm" style="margin-left:3px" onclick="openMov('torneria',${d.id},'out')">－</button>
       ${adm?`<button class="btn btn-outline btn-sm" style="margin-left:3px" onclick="openTorModal(${d.id})">✏</button>
@@ -2415,6 +2437,8 @@ function openTorModal(id=null){
     const v=d?d[f]:def[f];
     document.getElementById('mt-'+k).value = v==null?'':v;
   });
+  torFotosPend=[];
+  renderFotosTorForm();
   document.getElementById('mo-torneria').classList.add('open');
   setTimeout(()=>document.getElementById(id?'mt-nom':'mt-cod').focus(),50);
 }
@@ -2433,10 +2457,19 @@ async function saveTorneria(){
     qty:parseInt(val('qty'))||0, min:parseInt(val('min'))||0, precio:parseInt(val('prc'))||0,
     notas:val('not')
   };
-  if(editTorId) item.id=editTorId;
+  if(editTorId){
+    item.id=editTorId;
+    const prev=getTor().find(x=>x.id===editTorId);
+    if(prev && prev.fotos) item.fotos=prev.fotos;
+  }
   const btn=document.getElementById('mt-save'); btn.disabled=true;
   try{
     await apiPost({type:'torneria', action:'save', item});
+    if(torFotosPend.length){
+      const guardado=getTor().find(x=>String(x.codigo).toLowerCase()===codigo.toLowerCase());
+      if(guardado) await subirFotosTor(guardado.id, torFotosPend);
+      torFotosPend=[];
+    }
     closeMo('mo-torneria'); populateTorCatFilter(); renderTorStats(); renderTorTable();
   }catch(e){ err.textContent='Error al guardar: '+e.message; }
   btn.disabled=false;
@@ -2446,8 +2479,165 @@ async function deleteTorneria(id){
   const d=getTor().find(x=>x.id===id);
   if(!d)return;
   if(!confirm(`¿Eliminar "${d.nombre}" (${d.codigo})? Esta acción no se puede deshacer.`))return;
-  try{ await apiPost({type:'torneria', action:'delete', id}); populateTorCatFilter(); renderTorStats(); renderTorTable(); }
+  try{
+    await apiPost({type:'torneria', action:'delete', id});
+    fetch(`${FB_URL}/torneriaFotos/${id}.json`, {method:'DELETE'}).catch(()=>{});
+    delete TOR_FOTOS[id];
+    populateTorCatFilter(); renderTorStats(); renderTorTable();
+  }
   catch(e){ alert('Error al eliminar: '+e.message); }
+}
+
+/* ── Fotos de respaldo de tornería ──
+   Se comprimen en el navegador con más fuerza que las de las guías (lado mayor
+   1280 px, ~250 KB por foto): basta para identificar la herramienta y sube rápido.
+   Se guardan en `torneriaFotos/{idItem}/{idFoto}`; en el ítem queda solo el
+   contador `fotos`, así la lista de tornería sigue cargando liviana. */
+const TOR_FOTO_OPTS = {lado:1280, meta:250*1024};
+const TOR_FOTO_MAX  = 10;
+const TOR_FOTOS = {};          // caché {idItem: {idFoto: foto}}
+let torFotosPend = [];         // fotos elegidas en el formulario, aún sin subir
+let torFotosItem = null;       // ítem abierto en la galería
+
+async function comprimirParaTor(files){
+  const fotos=[], fallos=[];
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    if(!/^image\//.test(f.type)){ fallos.push(f.name+' (no es una imagen)'); continue; }
+    showSync(`Comprimiendo ${i+1} de ${files.length}…`);
+    try{ fotos.push(await comprimirImagen(f, TOR_FOTO_OPTS)); }
+    catch(e){ fallos.push(f.name+' ('+e.message+')'); }
+  }
+  return {fotos, fallos};
+}
+
+function ahorroTxt(fotos){
+  const orig=fotos.reduce((a,f)=>a+(f.original||0),0), fin=fotos.reduce((a,f)=>a+(f.size||0),0);
+  return orig ? `${pesoTxt(orig)} → ${pesoTxt(fin)}` : pesoTxt(fin);
+}
+
+async function agregarFotosTorForm(ev){
+  const input=ev.target, files=[...(input.files||[])];
+  input.value='';
+  if(!files.length) return;
+  const err=document.getElementById('mt-err'); err.textContent='';
+  const ya=editTorId?(Number((getTor().find(x=>x.id===editTorId)||{}).fotos)||0):0;
+  if(ya+torFotosPend.length+files.length>TOR_FOTO_MAX){ err.textContent=`Máximo ${TOR_FOTO_MAX} fotos por ítem.`; return; }
+  try{
+    const {fotos, fallos}=await comprimirParaTor(files);
+    torFotosPend=torFotosPend.concat(fotos);
+    if(fallos.length) err.textContent='No se pudieron agregar: '+fallos.join(', ');
+    renderFotosTorForm();
+  } finally { hideSync(); }
+}
+
+function renderFotosTorForm(){
+  const c=document.getElementById('mt-fotos'), info=document.getElementById('mt-fotos-info');
+  if(!c) return;
+  const ya=editTorId?(Number((getTor().find(x=>x.id===editTorId)||{}).fotos)||0):0;
+  c.innerHTML=torFotosPend.map((f,i)=>`<div class="foto-item">
+      <img src="${f.data}" alt="${esc(f.nombre)}" onclick="abrirVisorFoto(torFotosPend[${i}])">
+      <button type="button" class="foto-del" title="Quitar" onclick="torFotosPend.splice(${i},1);renderFotosTorForm()">✕</button>
+      <div class="foto-pie">${pesoTxt(f.size)}</div>
+    </div>`).join('');
+  info.textContent = torFotosPend.length
+    ? `${torFotosPend.length} por subir · ${ahorroTxt(torFotosPend)}`
+    : (ya ? `Ya tiene ${ya} foto${ya>1?'s':''}. Se comprimen antes de subir.` : 'Se comprimen antes de subir.');
+}
+
+/* Sube un lote de fotos ya comprimidas y actualiza el contador del ítem */
+async function subirFotosTor(itemId, fotos){
+  showSync('Subiendo fotos…');
+  try{
+    const lote={};
+    fotos.forEach(f=>{ lote[nuevoFotoId()]=fotoRegistro(f); });
+    const r=await fetch(`${FB_URL}/torneriaFotos/${itemId}.json`, {method:'PATCH', body:JSON.stringify(lote)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=getTor().find(x=>x.id===itemId);
+    if(TOR_FOTOS[itemId]) TOR_FOTOS[itemId]={...TOR_FOTOS[itemId], ...lote};
+    const n=TOR_FOTOS[itemId] ? Object.keys(TOR_FOTOS[itemId]).length : (Number(d&&d.fotos)||0)+fotos.length;
+    await guardarContadorTor(itemId, n);
+  } finally { hideSync(); }
+}
+
+async function guardarContadorTor(itemId, n){
+  await fetch(`${FB_URL}/torneria/${itemId}.json`, {method:'PATCH', body:JSON.stringify({fotos:n})});
+  const d=getTor().find(x=>x.id===itemId);
+  if(d) d.fotos=n;
+  renderTorTable();
+}
+
+async function openFotosTor(id){
+  const d=getTor().find(x=>x.id===id);
+  if(!d) return;
+  torFotosItem=id;
+  document.getElementById('tf-sub').textContent=`${d.codigo} · ${d.nombre}`;
+  document.getElementById('tf-err').textContent='';
+  document.getElementById('tf-grid').innerHTML='<div class="fotos-vacio">Cargando…</div>';
+  renderFotosTorAcciones();
+  document.getElementById('mo-tor-fotos').classList.add('open');
+  try{
+    if(!TOR_FOTOS[id]){
+      const r=await fetch(`${FB_URL}/torneriaFotos/${id}.json`);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      TOR_FOTOS[id]=(await r.json())||{};
+    }
+    renderFotosTorGaleria();
+  }catch(e){
+    document.getElementById('tf-grid').innerHTML='';
+    document.getElementById('tf-err').textContent='No se pudieron cargar las fotos: '+e.message;
+  }
+}
+
+function renderFotosTorGaleria(){
+  const fotos=TOR_FOTOS[torFotosItem]||{}, ids=Object.keys(fotos);
+  document.getElementById('tf-grid').innerHTML = ids.length
+    ? ids.map(fid=>{ const f=fotos[fid]; return `<div class="foto-item">
+        <img src="${f.data}" alt="${esc(f.nombre||'foto')}" onclick="abrirVisorFoto(TOR_FOTOS[${torFotosItem}]['${fid}'])">
+        ${esAdmin()?`<button type="button" class="foto-del" title="Eliminar" onclick="borrarFotoTor('${fid}')">✕</button>`:''}
+        <div class="foto-pie">${pesoTxt(f.size)}</div>
+      </div>`; }).join('')
+    : '<div class="fotos-vacio">Este ítem no tiene fotos de respaldo.</div>';
+  renderFotosTorAcciones();
+}
+
+function renderFotosTorAcciones(){
+  document.getElementById('tf-actions').innerHTML =
+    (esAdmin()?`<button class="btn btn-primary" onclick="document.getElementById('tf-file').click()">📷 Agregar fotos</button>`:'') +
+    `<button class="btn btn-outline" onclick="closeMo('mo-tor-fotos')">Cerrar</button>`;
+}
+
+async function subirFotosTorGaleria(ev){
+  const input=ev.target, files=[...(input.files||[])];
+  input.value='';
+  if(!files.length || torFotosItem==null) return;
+  const err=document.getElementById('tf-err'); err.textContent='';
+  if(!esAdmin()){ err.textContent='Solo los administradores pueden subir fotos.'; return; }
+  const actuales=Object.keys(TOR_FOTOS[torFotosItem]||{}).length;
+  if(actuales+files.length>TOR_FOTO_MAX){ err.textContent=`Máximo ${TOR_FOTO_MAX} fotos por ítem.`; return; }
+  try{
+    const {fotos, fallos}=await comprimirParaTor(files);
+    if(fallos.length) err.textContent='No se pudieron agregar: '+fallos.join(', ');
+    if(!fotos.length) return;
+    await subirFotosTor(torFotosItem, fotos);
+    renderFotosTorGaleria();
+  }catch(e){ err.textContent='Error al subir las fotos: '+e.message; }
+  finally { hideSync(); }
+}
+
+async function borrarFotoTor(fid){
+  if(!esAdmin() || torFotosItem==null) return;
+  if(!confirm('¿Eliminar esta foto? Esta acción no se puede deshacer.')) return;
+  const err=document.getElementById('tf-err'); err.textContent='';
+  showSync('Eliminando…');
+  try{
+    const r=await fetch(`${FB_URL}/torneriaFotos/${torFotosItem}/${fid}.json`, {method:'DELETE'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    delete TOR_FOTOS[torFotosItem][fid];
+    await guardarContadorTor(torFotosItem, Object.keys(TOR_FOTOS[torFotosItem]).length);
+    renderFotosTorGaleria();
+  }catch(e){ err.textContent='Error al eliminar la foto: '+e.message; }
+  finally { hideSync(); }
 }
 
 function exportTorCSV(){
