@@ -535,6 +535,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
     <nav>
       <button id="nav-inv" class="active" onclick="showPage('inventario')">Inventario</button>
       <button id="nav-ins" onclick="showPage('insumos')">Insumos</button>
+      <button id="nav-tor" onclick="showPage('torneria')">Tornería</button>
       <button id="nav-cro" onclick="showPage('cronograma')">Cronograma</button>
       <button id="nav-adm" style="display:none" onclick="showPage('admin')">Admin</button>
     </nav>
@@ -601,6 +602,34 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
           <tbody id="ins-tbl-body"></tbody>
         </table>
         <div class="empty" id="ins-tbl-empty" style="display:none">Sin resultados.</div>
+      </div>
+    </div>
+
+    <!-- ── TORNERÍA ── -->
+    <div class="page" id="page-torneria">
+      <div class="cards" id="tor-stat-cards"></div>
+      <div class="toolbar">
+        <input type="text" id="tor-search" placeholder="Buscar por nombre, código, medida, marca…" oninput="renderTorTable()">
+        <select id="tor-filter-cat" onchange="renderTorTable()"><option value="">Todas las categorías</option></select>
+        <select id="tor-filter-stock" onchange="renderTorTable()">
+          <option value="">Todo el stock</option>
+          <option value="ok">Stock OK</option>
+          <option value="warn">Stock bajo</option>
+          <option value="danger">Sin stock</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="exportTorCSV()">⬇ CSV</button>
+        <button class="btn btn-primary btn-sm tor-adm" onclick="openTorModal()">+ Agregar</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th data-res>Código</th><th data-res>Nombre</th><th>Categoría</th><th>Medida / Especificación</th>
+            <th>Ubicación</th><th data-res>Cant.</th><th>Condición</th><th data-res>Estado</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tor-tbl-body"></tbody>
+        </table>
+        <div class="empty" id="tor-tbl-empty" style="display:none">Sin resultados.</div>
       </div>
     </div>
 
@@ -1173,6 +1202,51 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
   </div>
 </div>
 
+<!-- ════ MODAL TORNERÍA ════ -->
+<div class="overlay" id="mo-torneria">
+  <div class="modal" style="max-width:520px">
+    <h2 id="mt-title">Agregar ítem de tornería</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Código *</label><input id="mt-cod" placeholder="TOR-001"></div>
+      <div class="form-group"><label>Categoría *</label>
+        <select id="mt-cat">
+          <option>Insertos / Videas</option>
+          <option>Herramientas de corte</option>
+          <option>Portaherramientas</option>
+          <option>Platos</option>
+          <option>Perros de arrastre</option>
+          <option>Puntos / Contrapuntos</option>
+          <option>Brocas / Machos / Escariadores</option>
+          <option>Instrumentos de medición</option>
+          <option>Accesorios de torno</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Nombre *</label><input id="mt-nom" placeholder="Ej: Inserto CNMG / Pie de metro digital"></div>
+      <div class="form-group"><label>Medida / Especificación</label><input id="mt-esp" placeholder="Ej: CNMG 120408 · 0-150 mm"></div>
+      <div class="form-group"><label>Marca / Modelo</label><input id="mt-mod" placeholder="Ej: Sandvik / Mitutoyo"></div>
+      <div class="form-group"><label>Ubicación</label><input id="mt-ubi" placeholder="Ej: Cajón 2, torno 1"></div>
+      <div class="form-group"><label>Condición</label>
+        <select id="mt-cond"><option>Nuevo</option><option>Bueno</option><option>Usado</option><option>Desgastado</option><option>Dañado</option><option>En reparación</option></select>
+      </div>
+      <div class="form-group"><label>Unidad</label>
+        <select id="mt-uni"><option>unidades</option><option>cajas</option><option>juegos</option><option>pares</option></select>
+      </div>
+      <div class="form-group"><label>Cantidad actual *</label><input id="mt-qty" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label>Stock mínimo</label><input id="mt-min" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label>Precio unitario (CLP)</label><input id="mt-prc" type="number" min="0" placeholder="0"></div>
+      <div class="form-group full"><label>Notas</label>
+        <textarea id="mt-not" rows="2" style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;outline:none" placeholder="Material que corta, grado, calibración, proveedor…"></textarea>
+      </div>
+    </div>
+    <div class="modal-err" id="mt-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-torneria')">Cancelar</button>
+      <button class="btn btn-primary" id="mt-save" onclick="saveTorneria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL INSUMO ════ -->
 <div class="overlay" id="mo-insumo">
   <div class="modal" style="max-width:480px">
@@ -1514,6 +1588,7 @@ const SESS_KEY = 'sf_session';
 let USERS = [];
 let INV   = [];
 let INS   = [];
+let TOR   = [];     // inventario de tornería (insertos, portaherramientas, platos, medición…)
 let insumosReady = false;
 let backendVersion = '?';
 let CONFIG = {};
@@ -1529,12 +1604,12 @@ function toArr(x){ if(!x) return []; return Array.isArray(x)?x.filter(Boolean):O
 function fbPath(type){
   return type==='user' ? 'users' : type==='insumo' ? 'insumos'
        : type==='cliente' ? 'clientes' : type==='trabajo' ? 'cronograma'
-       : type==='maquina' ? 'maquinas' : 'inventory';
+       : type==='maquina' ? 'maquinas' : type==='torneria' ? 'torneria' : 'inventory';
 }
 function fbList(type){
   return type==='user' ? USERS : type==='insumo' ? INS
        : type==='cliente' ? CLIENTES : type==='trabajo' ? CRONO
-       : type==='maquina' ? MAQUINAS : INV;
+       : type==='maquina' ? MAQUINAS : type==='torneria' ? TOR : INV;
 }
 function fbSetList(type, arr){
   if(type==='user') USERS = arr;
@@ -1542,12 +1617,13 @@ function fbSetList(type, arr){
   else if(type==='cliente') CLIENTES = arr;
   else if(type==='trabajo') CRONO = arr;
   else if(type==='maquina') MAQUINAS = arr;
+  else if(type==='torneria') TOR = arr;
   else INV = arr;
 }
 
 /* Lee las colecciones en paralelo (~200ms). No descarga el historial de guías. */
 async function apiGet(){
-  const paths = ['users','inventory','insumos','config','clientes','cronograma','planos','maquinas'];
+  const paths = ['users','inventory','insumos','config','clientes','cronograma','planos','maquinas','torneria'];
   const res = await Promise.all(paths.map(p =>
     fetch(`${FB_URL}/${p}.json`).then(r=>{
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1562,6 +1638,7 @@ async function apiGet(){
   CRONO    = toArr(res[5]);
   PLANOS   = res[6] || {};   // solo metadatos; el PDF se descarga al abrirlo
   MAQUINAS = toArr(res[7]);
+  TOR      = toArr(res[8]);
   insumosReady = true;
   backendVersion = 'firebase';
 }
@@ -1597,6 +1674,7 @@ async function apiPost(payload){
 function getUsers(){ return USERS; }
 function getInv(){ return INV; }
 function getIns(){ return INS; }
+function getTor(){ return TOR; }
 
 /* ── Session helpers ── */
 function getSession(){ return JSON.parse(sessionStorage.getItem(SESS_KEY)||'null'); }
@@ -1649,6 +1727,7 @@ async function reloadData(){
     await apiGet(); hideSync();
     populateCatFilter(); renderStats(); renderTable(); renderAdminTable(); renderUserTable();
     populateInsCatFilter(); renderInsStats(); renderInsTable(); renderAdminInsTable();
+    populateTorCatFilter(); renderTorStats(); renderTorTable();
     populateCronoFilters(); renderCronoStats(); croRefresh();
   }
   catch(e){ hideSync(); alert('No se pudo actualizar: '+e.message); }
@@ -1659,11 +1738,13 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('nav-inv').classList.toggle('active', p==='inventario');
   document.getElementById('nav-ins').classList.toggle('active', p==='insumos');
+  document.getElementById('nav-tor').classList.toggle('active', p==='torneria');
   document.getElementById('nav-cro').classList.toggle('active', p==='cronograma');
   document.getElementById('nav-adm').classList.toggle('active', p==='admin');
   document.getElementById('page-'+p).classList.add('active');
   if(p==='inventario'){ populateCatFilter(); renderStats(); renderTable(); }
   if(p==='insumos'){ populateInsCatFilter(); renderInsStats(); renderInsTable(); }
+  if(p==='torneria'){ populateTorCatFilter(); renderTorStats(); renderTorTable(); }
   if(p==='cronograma'){ populateCronoFilters(); renderCronoStats(); croRefresh(); }
   if(p==='admin'){ populateCatFilter(); renderAdminTable(); renderAdminInsTable(); renderUserTable(); renderClientesTable(); renderLogoPrev(); }
 }
@@ -2253,6 +2334,131 @@ function exportInsCSV(){
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
   a.download='surframe-insumos.csv';
+  a.click();
+}
+
+/* ═══════════════ TORNERÍA ═══════════════
+   Insertos (videas), herramientas de corte, portaherramientas, platos, perros,
+   instrumentos de medición, etc. Se guarda en Firebase bajo /torneria.
+   Todos pueden registrar ingresos y salidas; solo admin agrega, edita o borra. */
+let editTorId=null;
+
+function renderTorStats(){
+  const d=getTor();
+  const sinStock=d.filter(x=>Number(x.qty)===0).length;
+  const bajo=d.filter(x=>Number(x.qty)>0&&Number(x.qty)<=Number(x.min)).length;
+  const ok=d.filter(x=>Number(x.qty)>Number(x.min)).length;
+  const val=d.reduce((a,x)=>a+(Number(x.qty)*Number(x.precio||0)),0);
+  document.getElementById('tor-stat-cards').innerHTML=`
+    <div class="card"><label>Total ítems</label><div class="val">${d.length}</div></div>
+    <div class="card"><label>Stock OK</label><div class="val ok">${ok}</div></div>
+    <div class="card"><label>Stock bajo</label><div class="val warn">${bajo}</div></div>
+    <div class="card"><label>Sin stock</label><div class="val danger">${sinStock}</div></div>
+    ${esAdmin()?`<div class="card"><label>Valor tornería</label><div class="val" style="font-size:17px">$${val.toLocaleString('es-CL')}</div></div>`:''}`;
+  document.querySelectorAll('.tor-adm').forEach(el=>el.style.display=esAdmin()?'':'none');
+}
+
+function populateTorCatFilter(){
+  const cats=[...new Set(getTor().map(x=>x.categoria))].filter(Boolean).sort();
+  const sel=document.getElementById('tor-filter-cat');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todas las categorías</option>';
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  sel.value=cur;
+}
+
+function renderTorTable(){
+  const q=(document.getElementById('tor-search').value||'').toLowerCase();
+  const cat=document.getElementById('tor-filter-cat').value;
+  const st=document.getElementById('tor-filter-stock').value;
+  const f=getTor().filter(d=>{
+    const m=!q||[d.codigo,d.nombre,d.modelo,d.categoria,d.espec,d.ubicacion].join(' ').toLowerCase().includes(q);
+    const cm=!cat||d.categoria===cat;
+    const qy=Number(d.qty), mn=Number(d.min);
+    const sm=!st||(st==='ok'&&qy>mn)||(st==='warn'&&qy>0&&qy<=mn)||(st==='danger'&&qy===0);
+    return m&&cm&&sm;
+  }).sort((a,b)=>String(a.categoria).localeCompare(String(b.categoria))||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
+  const tbody=document.getElementById('tor-tbl-body');
+  const empty=document.getElementById('tor-tbl-empty');
+  if(!f.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const adm=esAdmin();
+  tbody.innerHTML=f.map(d=>`<tr>
+    <td><code style="font-size:12px;color:#666">${esc(d.codigo)}</code></td>
+    <td><strong>${esc(d.nombre)}</strong>${d.modelo?`<br><small style="color:#aaa">${esc(d.modelo)}</small>`:''}</td>
+    <td><span class="tag-inox">${esc(d.categoria)}</span></td>
+    <td style="font-size:13px">${esc(d.espec)}</td>
+    <td style="color:#666;font-size:12px">${esc(d.ubicacion)}</td>
+    <td><strong style="font-size:15px">${d.qty}</strong> <span style="color:#aaa;font-size:11px">${esc(d.unit)}</span></td>
+    <td style="color:#666;font-size:12px">${esc(d.condicion)}</td>
+    <td>${stockBadge(d)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-in btn-sm" onclick="openMov('torneria',${d.id},'in')">＋</button>
+      <button class="btn btn-out btn-sm" style="margin-left:3px" onclick="openMov('torneria',${d.id},'out')">－</button>
+      ${adm?`<button class="btn btn-outline btn-sm" style="margin-left:3px" onclick="openTorModal(${d.id})">✏</button>
+      <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="deleteTorneria(${d.id})">✕</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+const TOR_FIELDS={cod:'codigo',cat:'categoria',nom:'nombre',esp:'espec',mod:'modelo',ubi:'ubicacion',cond:'condicion',uni:'unit',qty:'qty',min:'min',prc:'precio',not:'notas'};
+
+function openTorModal(id=null){
+  if(!esAdmin()) return;
+  editTorId=id;
+  document.getElementById('mt-title').textContent=id?'Editar ítem de tornería':'Agregar ítem de tornería';
+  document.getElementById('mt-err').textContent='';
+  const d=id?getTor().find(x=>x.id===id):null;
+  if(id&&!d) return;
+  const def={categoria:document.getElementById('tor-filter-cat').value||'Insertos / Videas',condicion:'Nuevo',unit:'unidades'};
+  Object.entries(TOR_FIELDS).forEach(([k,f])=>{
+    const v=d?d[f]:def[f];
+    document.getElementById('mt-'+k).value = v==null?'':v;
+  });
+  document.getElementById('mo-torneria').classList.add('open');
+  setTimeout(()=>document.getElementById(id?'mt-nom':'mt-cod').focus(),50);
+}
+
+async function saveTorneria(){
+  const err=document.getElementById('mt-err');
+  const val=k=>document.getElementById('mt-'+k).value.trim();
+  const codigo=val('cod'), nombre=val('nom');
+  if(!codigo||!nombre){err.textContent='Código y nombre son obligatorios.';return;}
+  const dup=getTor().find(d=>String(d.codigo).toLowerCase()===codigo.toLowerCase()&&d.id!==editTorId);
+  if(dup){err.textContent='Ya existe un ítem con ese código.';return;}
+  const item={
+    codigo,nombre,
+    categoria:val('cat'), espec:val('esp'), modelo:val('mod'), ubicacion:val('ubi'),
+    condicion:val('cond'), unit:val('uni'),
+    qty:parseInt(val('qty'))||0, min:parseInt(val('min'))||0, precio:parseInt(val('prc'))||0,
+    notas:val('not')
+  };
+  if(editTorId) item.id=editTorId;
+  const btn=document.getElementById('mt-save'); btn.disabled=true;
+  try{
+    await apiPost({type:'torneria', action:'save', item});
+    closeMo('mo-torneria'); populateTorCatFilter(); renderTorStats(); renderTorTable();
+  }catch(e){ err.textContent='Error al guardar: '+e.message; }
+  btn.disabled=false;
+}
+
+async function deleteTorneria(id){
+  const d=getTor().find(x=>x.id===id);
+  if(!d)return;
+  if(!confirm(`¿Eliminar "${d.nombre}" (${d.codigo})? Esta acción no se puede deshacer.`))return;
+  try{ await apiPost({type:'torneria', action:'delete', id}); populateTorCatFilter(); renderTorStats(); renderTorTable(); }
+  catch(e){ alert('Error al eliminar: '+e.message); }
+}
+
+function exportTorCSV(){
+  const cat=document.getElementById('tor-filter-cat').value;
+  const data=getTor().filter(d=>!cat||d.categoria===cat);
+  const hdr=['Código','Categoría','Nombre','Medida / Especificación','Marca / Modelo','Ubicación','Condición','Cantidad','Unidad','Stock mín','Precio','Notas'];
+  const rows=data.map(d=>[d.codigo,d.categoria,d.nombre,d.espec,d.modelo,d.ubicacion,d.condicion,d.qty,d.unit,d.min,d.precio,d.notas].map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
+  const csv=[hdr.join(','),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\ufeff'+encodeURIComponent(csv);
+  a.download='surframe-torneria'+(cat?'-'+cat.replace(/[^\wáéíóúñ]+/gi,'-'):'')+'.csv';
   a.click();
 }
 
@@ -4612,10 +4818,11 @@ async function generarEtiquetas(){
 /* ═══════════════ MOVIMIENTOS DE STOCK ═══════════════ */
 let mov={entity:'piece',id:null,type:'in'};
 
-function movList(){ return mov.entity==='insumo'?getIns():getInv(); }
+function movListFor(e){ return e==='insumo'?getIns():e==='torneria'?getTor():getInv(); }
+function movList(){ return movListFor(mov.entity); }
 
 function openMov(entity,id,type){
-  const d=(entity==='insumo'?getIns():getInv()).find(x=>x.id===id);
+  const d=movListFor(entity).find(x=>x.id===id);
   if(!d)return;
   mov={entity,id,type};
   const esIn=type==='in';
@@ -4647,6 +4854,7 @@ function movPreview(){
 
 function renderFor(entity){
   if(entity==='insumo'){ renderInsTable(); renderInsStats(); renderAdminInsTable(); }
+  else if(entity==='torneria'){ renderTorTable(); renderTorStats(); }
   else { renderTable(); renderStats(); renderAdminTable(); }
 }
 
