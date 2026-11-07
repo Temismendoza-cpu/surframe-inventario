@@ -619,6 +619,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
         </select>
         <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
         <button class="btn btn-outline btn-sm" onclick="exportTorCSV()">⬇ CSV</button>
+        <button class="btn btn-outline btn-sm tor-adm" onclick="openTorCodModal()">⌨ Insertar código</button>
         <button class="btn btn-primary btn-sm tor-adm" onclick="openTorModal()">+ Agregar</button>
       </div>
       <div class="tbl-wrap">
@@ -1255,6 +1256,23 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-torneria')">Cancelar</button>
       <button class="btn btn-primary" id="mt-save" onclick="saveTorneria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL INSERTAR POR CÓDIGO (TORNERÍA) ════ -->
+<div class="overlay" id="mo-torcod">
+  <div class="modal" style="max-width:460px">
+    <h2>Insertar por código</h2>
+    <p style="font-size:13px;color:#777;margin:-4px 0 12px">Escribe el código grabado en la herramienta. Puedes agregar detalles después, por ejemplo: <code>E3D-15020-05-P diámetro 15</code></p>
+    <div class="form-group full"><input id="mtc-in" placeholder="Ej: E3D-15020-05-P · CNMG120408 · PCLNR2525M12" autocomplete="off" autocapitalize="characters"
+      oninput="previewCodigoTor()" onkeydown="if(event.key==='Enter')aplicarCodigoTor()"></div>
+    <div id="mtc-prev" style="margin-top:10px"></div>
+    <div style="font-size:11px;color:#aaa;margin-top:10px">Reconoce brocas U (Korloy E3D, SP), insertos ISO (CNMG, SPMG, VBMT…), portaherramientas de exterior (PCLNR…), barras de interior (S20R-SCLCR…), tronzado (MGEHR, MGMN), pinzas ER y platos de pinzas CL.</div>
+    <div class="modal-err" id="mtc-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeMo('mo-torcod')">Cancelar</button>
+      <button class="btn btn-primary" onclick="aplicarCodigoTor()">Continuar</button>
     </div>
   </div>
 </div>
@@ -2456,6 +2474,159 @@ function sugerirCodigoTor(){
   if(inp.value && inp.value!==torCodAuto) return;
   torCodAuto=siguienteCodigoTor(document.getElementById('mt-cat').value);
   inp.value=torCodAuto; inp.dataset.auto='1';
+}
+
+/* ═══════════════ TORNERÍA · INSERTAR POR CÓDIGO ═══════════════
+   Lee el código grabado en la herramienta (ej. E3D-15020-05-P, CNMG120408,
+   PCLNR2525M12, S20R-SCLCR09, ER32-12) y arma la ficha: categoría, nombre,
+   medida y notas. Luego abre el formulario normal para revisar y guardar. */
+const ISO_FORMA={C:'rómbico 80°',D:'rómbico 55°',K:'paralelogramo 55°',R:'redondo',S:'cuadrado 90°',T:'triangular 60°',V:'rómbico 35°',W:'trigonal 80°',X:'especial'};
+const ISO_ALIVIO={A:'3°',B:'5°',C:'7°',D:'15°',E:'20°',F:'25°',G:'30°',N:'0° (negativo)',P:'11°',O:'especial'};
+const ISO_TIPO={A:'agujero, sin rompevirutas',G:'agujero + rompevirutas doble cara',M:'agujero + rompevirutas una cara',N:'sin agujero ni rompevirutas',R:'sin agujero, rompevirutas una cara',T:'agujero avellanado, rompevirutas una cara',W:'agujero avellanado, sin rompevirutas',X:'especial'};
+const ISO_ESPESOR={'01':1.59,T1:1.98,'02':2.38,'03':3.18,T3:3.97,'04':4.76,'05':5.56,'06':6.35,'07':7.94,'09':9.52};
+const ISO_SUJECION={C:'brida superior',D:'brida rígida (doble)',M:'brida y pasador',P:'palanca (pin)',S:'tornillo'};
+const ISO_LARGO={H:100,K:125,M:150,P:170,Q:180,R:200,S:250,T:300,U:350,V:400,W:450,X:'especial',Y:500};
+const ISO_LARGO_BARRA={F:80,G:90,H:100,J:110,K:125,L:140,M:150,N:160,P:170,Q:180,R:200,S:250,T:300,U:350,V:400,W:450,Y:500};
+const ISO_ANGULO_POS={A:'90° recto',B:'75°',C:'90° frontal',D:'45°',E:'60°',F:'90° frontal desplazado',G:'90° desplazado',J:'93°',K:'75° frontal',L:'95°',N:'63°',Q:'107,5°',R:'75°',S:'45°',T:'60°',U:'93°',V:'72,5°',W:'60°',Y:'85°'};
+const MANO={R:'derecha',L:'izquierda',N:'neutra'};
+const torNum=s=>Number(String(s).replace(',','.'));
+const torMm=v=>String(Math.round(v*100)/100).replace('.',',')+' mm';
+
+/* Cada decodificador recibe el código en mayúsculas sin espacios y devuelve la ficha o null */
+const TOR_DECODERS=[
+  // Broca de insertos Korloy KED King: E3D-15020-05-P → 3xD, Ø15,0, vástago 20, insertos tamaño 05
+  {nombre:'Broca U Korloy KED', fn:c=>{
+    const m=c.match(/^E(\d)D-?(\d{3})(\d{2})-?(\d{2})(?:-?P)?$/); if(!m) return null;
+    const xd=+m[1], d=+m[2]/10, sh=+m[3], ins=m[4];
+    return {categoria:'Brocas / Machos / Escariadores', nombre:`Broca de insertos (broca U) Ø${String(d).replace('.',',')} mm ${xd}xD`,
+      espec:`Ø${torMm(d)} · prof. ${xd}xD (~${torMm(d*xd)}) · vástago Ø${sh}`, modelo:`Korloy KED King · ${c}`,
+      notas:`Insertos tamaño ${ins}: SPMT (periférico) + XOMT (central). Refrigeración interna.`, diametro:d};
+  }},
+  // Broca U genérica serie SP: SP14-4D-C25 → Ø14, 4xD, vástago 25, insertos SPMG
+  {nombre:'Broca U serie SP', fn:c=>{
+    const m=c.match(/^SP(\d+(?:\.\d)?)-?(\d)D-?C(\d+)$/); if(!m) return null;
+    const d=torNum(m[1]), xd=+m[2], sh=+m[3];
+    return {categoria:'Brocas / Machos / Escariadores', nombre:`Broca de insertos (broca U) Ø${String(d).replace('.',',')} mm ${xd}xD`,
+      espec:`Ø${torMm(d)} · prof. ${xd}xD (~${torMm(d*xd)}) · vástago Ø${sh}`, modelo:c,
+      notas:'Insertos SPMG (central y periférico). Refrigeración interna.', diametro:d};
+  }},
+  // Barra de interior ISO: S20R-SCLCR09 / A16Q-SDUCR07 → vástago Ø20, largo 200, tornillo, inserto C…
+  {nombre:'Barra de interior ISO', fn:c=>{
+    const m=c.match(/^([ACES])(\d{2})([A-Z])-?([CDMPS])([CDKRSTVW])([A-Z])([A-Z])([RL])(\d{2})(?:-?.*)?$/); if(!m) return null;
+    const [,mat,sh,lg,suj,forma,ang,,mano,filo]=m;
+    const largo=ISO_LARGO_BARRA[lg];
+    return {categoria:'Herramientas de interior', nombre:`Barra de interior Ø${+sh} mm (${MANO[mano]})`,
+      espec:`Vástago Ø${+sh}${largo?` · largo ${largo} mm`:''} · inserto ${forma}…${filo}`, modelo:c,
+      notas:`Barra ${mat==='A'?'de acero con refrigeración interna':mat==='E'?'de metal duro con refrigeración':mat==='C'?'de metal duro':'de acero'}. Sujeción por ${ISO_SUJECION[suj]}. Inserto ${ISO_FORMA[forma]||forma}, posición ${ISO_ANGULO_POS[ang]||ang}. Mano ${MANO[mano]}. Diámetro mínimo de agujero: ver catálogo.`};
+  }},
+  // Portaherramientas de exterior ISO: PCLNR2525M12 / MWLNR2020K08 / SVJBR2525M16
+  {nombre:'Portaherramientas exterior ISO', fn:c=>{
+    const m=c.match(/^([CDMPS])([CDKRSTVW])([A-Z])([A-Z])([RLN])(\d{2})(\d{2})-?([A-Z])-?(\d{2})$/); if(!m) return null;
+    const [,suj,forma,ang,alivio,mano,h,b,lg,filo]=m;
+    return {categoria:'Herramientas de exterior', nombre:`Portaherramientas de exterior ${+h}x${+b} (${MANO[mano]})`,
+      espec:`Mango ${+h}x${+b} mm · largo ${ISO_LARGO[lg]||lg} mm · inserto ${forma}${alivio}…${filo}`, modelo:c,
+      notas:`Sujeción por ${ISO_SUJECION[suj]}. Inserto ${ISO_FORMA[forma]||forma} de ${+filo} mm, alivio ${ISO_ALIVIO[alivio]||alivio}. Ángulo de posición ${ISO_ANGULO_POS[ang]||ang}. Mano ${MANO[mano]}.`};
+  }},
+  // Inserto ISO de torneado: CNMG120408-MA, SPMG050204, TNMG160404, VBMT160404
+  {nombre:'Inserto ISO', fn:c=>{
+    const m=c.match(/^([CDKRSTVWX])([ABCDEFGNPO])([ACEFGHJKLMNU])([AGMNRTWX])(\d{2})(\d{2}|T\d)(\d{2}|M0)(?:-?([A-Z0-9-]+))?$/); if(!m) return null;
+    const [,forma,alivio,tol,tipo,lado,esp,rad,rompe]=m;
+    const r=rad==='M0'?'redondo':torNum(rad)/10;
+    return {categoria:'Insertos / Videas', nombre:`Inserto ${forma}${alivio}${tol}${tipo} ${lado}${esp}${rad}`,
+      espec:`${ISO_FORMA[forma]||forma} · filo ${+lado} mm · espesor ${ISO_ESPESOR[esp]?torMm(ISO_ESPESOR[esp]):esp}${typeof r==='number'?' · radio '+torMm(r):''}`,
+      modelo:c, unit:'unidades',
+      notas:`Alivio ${ISO_ALIVIO[alivio]||alivio}. Tolerancia ${tol}. ${ISO_TIPO[tipo]?ISO_TIPO[tipo].charAt(0).toUpperCase()+ISO_TIPO[tipo].slice(1)+'.':''}${rompe?' Rompevirutas / grado: '+rompe+'.':''} Anotar el grado (calidad) de la caja.`};
+  }},
+  // Portaherramientas de tronzar tipo MGEHR2525-3 / MGIVR (interior)
+  {nombre:'Tronzado MGEH', fn:c=>{
+    const m=c.match(/^MG(EH|EV|IV|IH)([RL])(\d{2})(\d{2})-?(\d(?:\.\d)?)(?:T\d+)?$/); if(!m) return null;
+    const [,t,mano,h,b,a]=m;
+    const interior=t[0]==='I';
+    return {categoria:interior?'Herramientas de interior':'Herramientas de tronzar', nombre:`Portaherramientas de ${interior?'ranurado interior':'tronzar / ranurar'} ${a} mm (${MANO[mano]})`,
+      espec:`Mango ${+h}x${+b} mm · ancho de corte ${String(a).replace('.',',')} mm`, modelo:c,
+      notas:`Usa insertos MGMN${String(Math.round(torNum(a)*100)).padStart(3,'0')} (ancho ${String(a).replace('.',',')} mm). Mano ${MANO[mano]}.`};
+  }},
+  // Inserto de tronzar/ranurar MGMN300-M → ancho 3,0 mm
+  {nombre:'Inserto de tronzar MGMN', fn:c=>{
+    const m=c.match(/^MG(MN|GN)(\d{3})(?:-?([A-Z0-9]+))?$/); if(!m) return null;
+    const a=+m[2]/100;
+    return {categoria:'Insertos / Videas', nombre:`Inserto de tronzar ${m[1]==='GN'?'(rectificado) ':''}MG${m[1]}${m[2]}`,
+      espec:`Ancho ${torMm(a)}`, modelo:c, notas:`Para portaherramientas MGEH/MGIV de ${String(a).replace('.',',')} mm.${m[3]?' Rompevirutas / grado: '+m[3]+'.':''}`};
+  }},
+  // Pinza ER: ER32-12 / ER25 6-5 → pinza para Ø12
+  {nombre:'Pinza ER', fn:c=>{
+    const m=c.match(/^ER(\d{2})-?(\d+(?:[.,]\d+)?)(?:-(\d+(?:[.,]\d+)?))?$/); if(!m) return null;
+    const d=torNum(m[2]);
+    return {categoria:'Accesorios de torno', nombre:`Pinza ER${m[1]} Ø${String(d).replace('.',',')} mm`,
+      espec:`ER${m[1]} · rango ${m[3]?String(torNum(m[3])).replace('.',',')+'–':''}${String(d).replace('.',',')} mm`, modelo:c, notas:''};
+  }},
+  // Plato de pinzas StronGrip / hidráulico: CL52-A6, CL42-A5
+  {nombre:'Plato de pinzas', fn:c=>{
+    const m=c.match(/^CL(\d{2})-?A(\d)$/); if(!m) return null;
+    return {categoria:'Platos', nombre:'Plato de pinzas hidráulico (collet chuck)', espec:`Nariz de husillo A2-${m[2]} · paso de barra ~${m[1]} mm`,
+      modelo:c, notas:'Anotar el tipo de pinza que usa (ej. 177E) y la pinza montada.'};
+  }},
+];
+
+/* Busca el diámetro u otros datos escritos a mano junto al código */
+function decodificarCodigoTor(texto){
+  const limpio=String(texto||'').trim();
+  const partes=limpio.split(/\s+/);
+  const codigo=(partes.shift()||'').toUpperCase().replace(/[–—]/g,'-');
+  const extra=partes.join(' ');
+  let ficha=null, tipo='';
+  for(const d of TOR_DECODERS){ const r=d.fn(codigo); if(r){ ficha=r; tipo=d.nombre; break; } }
+  const avisos=[];
+  const dm=extra.match(/(?:di[aá]m(?:etro)?|ø|⌀|d)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i);
+  if(ficha && dm && ficha.diametro && Math.abs(torNum(dm[1])-ficha.diametro)>0.01)
+    avisos.push(`Escribiste diámetro ${dm[1]}, pero el código indica Ø${String(ficha.diametro).replace('.',',')}. Revisa el código.`);
+  if(!ficha){
+    ficha={categoria:'', nombre:'', espec:dm?`Ø${dm[1].replace('.',',')} mm`:'', modelo:codigo, notas:''};
+    avisos.push('No reconocí este código. Completa la categoría y el nombre a mano.');
+  }
+  if(extra) ficha.notas=(ficha.notas?ficha.notas+' ':'')+'Detalle ingresado: '+extra+'.';
+  return {codigo, ficha, tipo, avisos};
+}
+
+function openTorCodModal(){
+  if(!esAdmin()) return;
+  document.getElementById('mtc-in').value='';
+  document.getElementById('mtc-prev').innerHTML='';
+  document.getElementById('mtc-err').textContent='';
+  document.getElementById('mo-torcod').classList.add('open');
+  setTimeout(()=>document.getElementById('mtc-in').focus(),50);
+}
+
+function previewCodigoTor(){
+  const t=document.getElementById('mtc-in').value;
+  const box=document.getElementById('mtc-prev');
+  if(!t.trim()){ box.innerHTML=''; return; }
+  const {codigo, ficha, tipo, avisos}=decodificarCodigoTor(t);
+  const dup=getTor().find(x=>String(x.modelo||'').toUpperCase().includes(codigo));
+  if(dup) avisos.push(`Ya existe ${dup.codigo} con este código (${dup.nombre}). Puedes sumarle stock con ＋.`);
+  box.innerHTML=`<div style="background:#f7f7f9;border:1px solid #eee;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5">
+      ${tipo?`<div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:.04em">${esc(tipo)}</div>`:''}
+      <div><strong>${esc(ficha.nombre||'—')}</strong></div>
+      <div style="color:#555">${esc(ficha.categoria||'Sin categoría')}${ficha.espec?' · '+esc(ficha.espec):''}</div>
+      ${ficha.categoria?`<div style="color:#888">Código interno: <code>${esc(siguienteCodigoTor(ficha.categoria))}</code></div>`:''}
+    </div>
+    ${avisos.map(a=>`<div style="color:#b26a00;font-size:12px;margin-top:6px">⚠ ${esc(a)}</div>`).join('')}`;
+}
+
+/* Pasa la ficha decodificada al formulario normal de tornería para revisar y guardar */
+function aplicarCodigoTor(){
+  const t=document.getElementById('mtc-in').value;
+  if(!t.trim()){ document.getElementById('mtc-err').textContent='Escribe el código de la herramienta.'; return; }
+  const {ficha}=decodificarCodigoTor(t);
+  closeMo('mo-torcod');
+  openTorModal();
+  const set=(k,v)=>{ if(v!=null && v!=='') document.getElementById('mt-'+k).value=v; };
+  if(ficha.categoria){ document.getElementById('mt-cat').value=ficha.categoria; }
+  document.getElementById('mt-cod').value=''; sugerirCodigoTor();
+  set('nom',ficha.nombre); set('esp',ficha.espec); set('mod',ficha.modelo); set('not',ficha.notas);
+  set('uni',ficha.unit);
+  document.getElementById('mt-qty').value=1;
+  setTimeout(()=>document.getElementById(ficha.nombre?'mt-ubi':'mt-nom').focus(),60);
 }
 
 const TOR_FIELDS={cod:'codigo',cat:'categoria',nom:'nombre',esp:'espec',mod:'modelo',ubi:'ubicacion',cond:'condicion',uni:'unit',qty:'qty',min:'min',prc:'precio',not:'notas'};
