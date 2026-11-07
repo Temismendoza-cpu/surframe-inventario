@@ -1207,10 +1207,13 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
   <div class="modal" style="max-width:520px">
     <h2 id="mt-title">Agregar ítem de tornería</h2>
     <div class="form-grid">
-      <div class="form-group"><label>Código *</label><input id="mt-cod" placeholder="TOR-001"></div>
+      <div class="form-group"><label>Código *</label><input id="mt-cod" placeholder="BRO-001"></div>
       <div class="form-group"><label>Categoría *</label>
-        <select id="mt-cat">
+        <select id="mt-cat" onchange="sugerirCodigoTor()">
           <option>Insertos / Videas</option>
+          <option>Herramientas de interior</option>
+          <option>Herramientas de exterior</option>
+          <option>Herramientas de tronzar</option>
           <option>Herramientas de corte</option>
           <option>Portaherramientas</option>
           <option>Platos</option>
@@ -2423,6 +2426,38 @@ function renderTorTable(){
   </tr>`).join('');
 }
 
+/* Prefijo del código según la categoría: BRO-001, H-INT-001, PLA-001… */
+const TOR_PREFIJOS={
+  'Brocas / Machos / Escariadores':'BRO',
+  'Herramientas de interior':'H-INT',
+  'Herramientas de exterior':'H-EXT',
+  'Herramientas de tronzar':'H-TRO',
+  'Herramientas de corte':'H-COR',
+  'Platos':'PLA',
+  'Portaherramientas':'POR',
+  'Insertos / Videas':'INS',
+  'Perros de arrastre':'PER',
+  'Puntos / Contrapuntos':'PUN',
+  'Instrumentos de medición':'MED',
+  'Accesorios de torno':'ACC',
+  'Otro':'OTR'
+};
+function siguienteCodigoTor(cat){
+  const pre=TOR_PREFIJOS[cat]||'TOR';
+  const re=new RegExp('^'+pre.replace(/-/g,'\\-')+'-(\\d+)$','i');
+  const n=getTor().reduce((m,x)=>{const k=String(x.codigo||'').match(re);return k?Math.max(m,Number(k[1])):m;},0)+1;
+  return pre+'-'+String(n).padStart(3,'0');
+}
+/* Al crear un ítem, el código se arma solo; si el usuario lo escribió a mano, se respeta */
+let torCodAuto='';
+function sugerirCodigoTor(){
+  const inp=document.getElementById('mt-cod');
+  if(editTorId && !inp.dataset.auto) return;
+  if(inp.value && inp.value!==torCodAuto) return;
+  torCodAuto=siguienteCodigoTor(document.getElementById('mt-cat').value);
+  inp.value=torCodAuto; inp.dataset.auto='1';
+}
+
 const TOR_FIELDS={cod:'codigo',cat:'categoria',nom:'nombre',esp:'espec',mod:'modelo',ubi:'ubicacion',cond:'condicion',uni:'unit',qty:'qty',min:'min',prc:'precio',not:'notas'};
 
 function openTorModal(id=null){
@@ -2437,6 +2472,9 @@ function openTorModal(id=null){
     const v=d?d[f]:def[f];
     document.getElementById('mt-'+k).value = v==null?'':v;
   });
+  const codInp=document.getElementById('mt-cod');
+  delete codInp.dataset.auto; torCodAuto='';
+  if(!id) sugerirCodigoTor();
   torFotosPend=[];
   renderFotosTorForm();
   document.getElementById('mo-torneria').classList.add('open');
