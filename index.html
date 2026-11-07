@@ -1268,7 +1268,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
     <div class="form-group full"><input id="mtc-in" placeholder="Ej: E3D-15020-05-P · CNMG120408 · PCLNR2525M12" autocomplete="off" autocapitalize="characters"
       oninput="previewCodigoTor()" onkeydown="if(event.key==='Enter')aplicarCodigoTor()"></div>
     <div id="mtc-prev" style="margin-top:10px"></div>
-    <div style="font-size:11px;color:#aaa;margin-top:10px">Reconoce brocas U (Korloy E3D, SP, TCAP), insertos ISO (CNMG, SPMG, VBMT…), portaherramientas de exterior (PCLNR…), barras de interior (S20R-SCLCR…), tronzado (MGEHR, MGMN), pinzas ER y platos de pinzas CL.</div>
+    <div style="font-size:11px;color:#aaa;margin-top:10px">Reconoce brocas (Korloy E3D, SP, TCAP, SF), insertos ISO (CNMG, SPMG, VBMT…), portaherramientas de exterior (PCLNR…), barras de interior (S20R-SCLCR…), tronzado (MGEHR, MGMN), pinzas ER y platos de pinzas CL.</div>
     <div class="modal-err" id="mtc-err"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-torcod')">Cancelar</button>
@@ -2517,6 +2517,14 @@ const TOR_DECODERS=[
     return {categoria:'Brocas / Machos / Escariadores', nombre:`Broca de un inserto tipo TCAP Ø${String(d).replace('.',',')} mm ${String(xd).replace('.',',')}xD`,
       espec:`Ø${torMm(d)} · prof. ${String(xd).replace('.',',')}xD (~${torMm(d*xd)})${sh?' · vástago Ø'+sh:''} · mano ${MANO[m[3]]}`, modelo:c,
       notas:'Un solo inserto XCMT/XCGT (ver código grabado en el cuerpo). Refrigeración interna. También mandrina y refrenta en torno.', diametro:d};
+  }},
+  // Broca de un inserto serie SF: SF-16R-3.25D-C20 → Ø16, 3,25xD, vástago 20, inserto QC..
+  {nombre:'Broca SF (un inserto)', fn:c=>{
+    const m=c.match(/^SF-?(\d+(?:\.\d+)?)([RL])-?(\d+(?:\.\d+)?)D(?:-?C(\d+))?$/); if(!m) return null;
+    const d=torNum(m[1]), xd=torNum(m[3]), sh=m[4]?+m[4]:null;
+    return {categoria:'Brocas / Machos / Escariadores', nombre:`Broca de un inserto serie SF Ø${String(d).replace('.',',')} mm ${String(xd).replace('.',',')}xD`,
+      espec:`Ø${torMm(d)} · prof. ${String(xd).replace('.',',')}xD (~${torMm(d*xd)})${sh?' · vástago Ø'+sh:''} · mano ${MANO[m[2]]}`, modelo:c,
+      notas:'Un solo inserto QCMT/QCGT (medida grabada en el cuerpo, ej. QC..080304). Anotar tornillo y llave Torx. Refrigeración interna. También mandrina y refrenta en torno.', diametro:d};
   }},
   // Barra de interior ISO: S20R-SCLCR09 / A16Q-SDUCR07 → vástago Ø20, largo 200, tornillo, inserto C…
   {nombre:'Barra de interior ISO', fn:c=>{
