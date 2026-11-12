@@ -82,7 +82,7 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .badge-warn{background:#fef5e7;color:#9c6a10}
 .badge-danger{background:#fdedec;color:#921f1a}
 .tag-inox{background:#e8eaf6;color:#3949ab;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
-/* Tornería: fila que encabeza cada grupo de códigos y despliega su lista */
+/* Inventario y Tornería: fila que encabeza cada grupo de códigos y despliega su lista */
 tr.tor-grupo{cursor:pointer;background:#f4f5f7;user-select:none;-webkit-tap-highlight-color:transparent}
 tr.tor-grupo:hover{background:#eceef1}
 tr.tor-grupo td{padding:10px 12px;font-size:14px}
@@ -428,7 +428,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
   }
   .empty{background:#fff;border:1px solid #e4e4e4;border-radius:12px;padding:2.2rem 1rem}
 
-  /* Tornería: la fila de grupo es una ficha propia, sin etiqueta ni flecha de ficha */
+  /* Inventario y Tornería: la fila de grupo es una ficha propia, sin etiqueta ni flecha de ficha */
   .tbl-wrap tbody tr.tor-grupo{background:#f1f2f4;border-color:#dcdde0;padding:12px 14px}
   .tbl-wrap tbody tr.tor-grupo:hover{background:#f1f2f4}
   .tbl-wrap tbody tr.tor-grupo td{padding:0;margin:0;border:none;font-size:14px;text-align:left;justify-content:flex-start}
@@ -1936,11 +1936,26 @@ function renderTable(){
     return sm;
   });
   if(q) f.sort((a,b)=>invMatchScore(a,q)-invMatchScore(b,q)||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
+  else f.sort((a,b)=>torPrefijo(a).localeCompare(torPrefijo(b),'es')||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
   const tbody=document.getElementById('tbl-body');
   const empty=document.getElementById('tbl-empty');
   if(!f.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  tbody.innerHTML=f.map(d=>`<tr>
+  /* Igual que en Tornería: los ítems se agrupan por el prefijo del código (PI, RO,
+     RE…) y cada grupo se toca para desplegar su lista. Al buscar o filtrar, los
+     grupos con resultados se muestran abiertos (con búsqueda, el mejor resultado primero). */
+  const filtrando=!!(q||cat||st);
+  const grupos=new Map();
+  f.forEach(d=>{const p=torPrefijo(d); if(!grupos.has(p)) grupos.set(p,[]); grupos.get(p).push(d);});
+  tbody.innerHTML=[...grupos].map(([pre,items])=>{
+    const abierto=filtrando||invGruposAbiertos.has(pre);
+    const alerta=items.filter(x=>Number(x.qty)<=Number(x.min)).length;
+    const cats=[...new Set(items.map(x=>x.categoria).filter(Boolean))];
+    const titulo=cats.length>2 ? cats.slice(0,2).join(' · ')+' y otras' : (cats.join(' · ')||'Sin categoría');
+    const cab=`<tr class="tor-grupo${abierto?' tg-abierto':''}" data-g="${esc(pre)}" onclick="toggleInvGrupo(this.dataset.g)">
+      <td colspan="8"><span class="tg-flecha">${abierto?'▾':'▸'}</span><code>${esc(pre)}</code><strong>${esc(titulo)}</strong><span class="tg-n">${items.length} ${items.length===1?'ítem':'ítems'}</span>${alerta?`<span class="tg-alerta">${alerta} con stock bajo</span>`:''}</td>
+    </tr>`;
+    return cab+(abierto?items.map(d=>`<tr>
     <td><code style="font-size:12px;color:#666">${d.codigo}</code></td>
     <td><strong>${d.nombre}</strong>${planoBtnInline(d.id)}<br><small style="color:#aaa">${d.categoria}</small></td>
     <td style="color:#666;font-size:13px">${d.modelo||'—'}</td>
@@ -1949,7 +1964,16 @@ function renderTable(){
     <td><strong style="font-size:15px">${d.qty}</strong></td>
     <td style="color:#aaa;font-size:12px">${d.unit}</td>
     <td>${stockBadge(d)}</td>
-  </tr>`).join('');
+  </tr>`).join(''):'');
+  }).join('');
+}
+/* Grupos desplegados del inventario; se recuerda mientras la página está abierta */
+const invGruposAbiertos=new Set();
+function toggleInvGrupo(pre){
+  /* Con búsqueda o filtro activos los grupos ya están todos abiertos */
+  if((document.getElementById('search').value||'').trim()||document.getElementById('filter-cat').value||document.getElementById('filter-stock').value) return;
+  if(invGruposAbiertos.has(pre)) invGruposAbiertos.delete(pre); else invGruposAbiertos.add(pre);
+  renderTable();
 }
 
 /* ═══ ADMIN INV TABLE ═══ */
