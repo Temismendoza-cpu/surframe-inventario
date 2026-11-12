@@ -563,6 +563,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
         </select>
         <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
         <button class="btn btn-outline btn-sm" onclick="openCsvModal()">⇅ CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="openReporte('piece')">📋 Reporte de movimientos</button>
       </div>
       <div class="tbl-wrap">
         <table>
@@ -591,6 +592,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
         </select>
         <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
         <button class="btn btn-outline btn-sm" onclick="exportInsCSV()">⬇ CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="openReporte('insumo')">📋 Reporte de movimientos</button>
         <button class="btn btn-primary btn-sm" onclick="abrirSolicitudes()" style="display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21v-5l-2.6-3.1a1.4 1.4 0 0 1 2.1-1.8L8 12.5V5a1.5 1.5 0 0 1 3 0v6"/><path d="M11 4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M17 8a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-3 5.2V21"/><path d="M7 21h10"/></svg> Solicitar insumos</button>
       </div>
       <div class="tbl-wrap">
@@ -620,6 +622,7 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
         <button class="btn btn-outline btn-sm" onclick="reloadData()">↻ Actualizar</button>
         <button class="btn btn-outline btn-sm" onclick="exportTorCSV()">⬇ CSV</button>
         <button class="btn btn-outline btn-sm tor-adm" onclick="openTorCodModal()">⌨ Insertar código</button>
+        <button class="btn btn-outline btn-sm" onclick="openReporte('torneria')">📋 Reporte</button>
         <button class="btn btn-primary btn-sm tor-adm" onclick="openTorModal()">+ Agregar</button>
       </div>
       <div class="tbl-wrap">
@@ -1195,10 +1198,62 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
       <input id="mv-qty" type="number" min="1" placeholder="0" oninput="movPreview()" onkeydown="if(event.key==='Enter')confirmMov()">
     </div>
     <p id="mv-preview" style="font-size:14px;color:#444;margin-top:12px;min-height:22px"></p>
+    <div class="form-group" style="margin-top:6px">
+      <label id="mv-usr-lbl">Quién retira *</label>
+      <select id="mv-usr"></select>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label id="mv-para-lbl">Para quién es *</label>
+      <input id="mv-para" list="mv-para-list" autocomplete="off" placeholder="Persona, cliente o trabajo" onkeydown="if(event.key==='Enter')confirmMov()">
+      <datalist id="mv-para-list"></datalist>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label>Observación</label>
+      <input id="mv-nota" placeholder="Opcional" onkeydown="if(event.key==='Enter')confirmMov()">
+    </div>
     <div class="modal-err" id="mv-err"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeMo('mo-mov')">Cancelar</button>
       <button class="btn btn-primary" id="mv-save" onclick="confirmMov()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL REPORTE DE MOVIMIENTOS ════ -->
+<div class="overlay" id="mo-rep">
+  <div class="modal" style="max-width:1080px">
+    <h2>Reporte de entradas y salidas</h2>
+    <div class="toolbar">
+      <input type="date" id="rp-desde" onchange="renderReporte()" style="flex:0 0 auto;min-width:0" title="Desde">
+      <input type="date" id="rp-hasta" onchange="renderReporte()" style="flex:0 0 auto;min-width:0" title="Hasta">
+      <select id="rp-sec" onchange="renderReporte()">
+        <option value="">Todas las secciones</option>
+        <option value="piece">Inventario (piezas)</option>
+        <option value="insumo">Insumos</option>
+        <option value="torneria">Tornería</option>
+      </select>
+      <select id="rp-tipo" onchange="renderReporte()">
+        <option value="">Entradas y salidas</option>
+        <option value="in">Solo entradas</option>
+        <option value="out">Solo salidas</option>
+      </select>
+      <select id="rp-usr" onchange="renderReporte()"><option value="">Todos los usuarios</option></select>
+      <input type="text" id="rp-q" placeholder="Buscar ítem, código, para quién…" oninput="renderReporte()">
+    </div>
+    <p id="rp-resumen" style="font-size:13px;color:#555;margin-bottom:10px;min-height:18px"></p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th data-res>Fecha</th><th data-res>Tipo</th><th>Sección</th><th>Código</th><th data-res>Ítem</th>
+          <th data-res>Cant.</th><th>Usuario</th><th>Para quién / Origen</th><th>Stock</th><th>Observación</th><th>Registró</th>
+        </tr></thead>
+        <tbody id="rp-body"></tbody>
+      </table>
+      <div class="empty" id="rp-empty" style="display:none">Sin movimientos en este período.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="exportReporteCSV()">⬇ Exportar CSV</button>
+      <button class="btn btn-primary" onclick="closeMo('mo-rep')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -5248,6 +5303,18 @@ function openMov(entity,id,type){
   document.getElementById('mv-qty').value='';
   document.getElementById('mv-err').textContent='';
   document.getElementById('mv-preview').textContent='';
+  /* Quién retira / ingresa (por defecto quien tiene la sesión) y para quién es */
+  const yo=(currentUser&&currentUser.name)||'';
+  const nombres=[...new Set(getUsers().map(u=>u.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  if(yo && !nombres.includes(yo)) nombres.unshift(yo);
+  document.getElementById('mv-usr').innerHTML=nombres.map(n=>`<option${n===yo?' selected':''}>${esc(n)}</option>`).join('');
+  document.getElementById('mv-usr-lbl').textContent = esIn?'Quién ingresa *':'Quién retira *';
+  document.getElementById('mv-para-lbl').textContent = esIn?'Proveedor / origen':'Para quién es *';
+  document.getElementById('mv-para').placeholder = esIn?'Opcional: proveedor, devolución…':'Persona, cliente o trabajo';
+  document.getElementById('mv-para').value='';
+  document.getElementById('mv-nota').value='';
+  const sugeridos = esIn ? [] : [...new Set([...nombres, ...CLIENTES.map(c=>c.nombre).filter(Boolean)])];
+  document.getElementById('mv-para-list').innerHTML=sugeridos.map(n=>`<option value="${attr(n)}">`).join('');
   const btn=document.getElementById('mv-save');
   btn.textContent = esIn?'Confirmar ingreso':'Confirmar egreso';
   btn.style.background = esIn?'#1a7a45':'#c0392b';
@@ -5281,9 +5348,14 @@ async function confirmMov(){
   const nuevo = mov.type==='in' ? Number(d.qty)+n : Number(d.qty)-n;
   if(nuevo<0){ err.textContent='No puedes retirar más de lo que hay en stock.'; return; }
   if(mov.entity==='insumo' && !insumosReady){ err.textContent='Falta activar la hoja de Insumos en el backend.'; return; }
+  const usuario=document.getElementById('mv-usr').value.trim();
+  const para=document.getElementById('mv-para').value.trim();
+  const nota=document.getElementById('mv-nota').value.trim();
+  if(!usuario){ err.textContent='Indica quién '+(mov.type==='in'?'ingresa':'retira')+'.'; return; }
+  if(mov.type==='out' && !para){ err.textContent='Indica para quién es el retiro.'; return; }
 
   /* Actualización optimista: se ve el cambio al instante y se guarda en segundo plano */
-  const entity=mov.entity, prevQty=Number(d.qty);
+  const entity=mov.entity, tipo=mov.type, prevQty=Number(d.qty);
   const item={...d, qty:nuevo};
   d.qty = nuevo;
   closeMo('mo-mov');
@@ -5296,7 +5368,120 @@ async function confirmMov(){
     d.qty = prevQty;
     renderFor(entity);
     alert('No se pudo guardar el movimiento: '+e.message+'\nEl stock se restauró a '+prevQty+'.');
+    return;
   }
+  /* El stock ya quedó guardado: ahora se anota el movimiento para el reporte */
+  try{
+    await registrarMov({
+      fecha:new Date().toISOString(), tipo, entidad:entity, itemId:d.id,
+      codigo:d.codigo||'', nombre:d.nombre||'', categoria:d.categoria||'',
+      cantidad:n, unit:d.unit||'', stockAntes:prevQty, stockDespues:nuevo,
+      usuario, para, nota,
+      registradoPor:(currentUser&&currentUser.name)||''
+    });
+  }catch(e){
+    alert('El stock se actualizó, pero no se pudo anotar el movimiento en el reporte: '+e.message);
+  }
+}
+
+/* ═══════════════ REPORTE DE MOVIMIENTOS ═══════════════
+   Cada ingreso o egreso se anota en /movimientos: qué ítem, cuánto, quién lo
+   retiró o ingresó y para quién era. Se descarga solo al abrir el reporte. */
+let MOVS=[];
+const SEC_NOMBRE={piece:'Inventario', insumo:'Insumos', torneria:'Tornería'};
+
+async function registrarMov(m){
+  const r=await fetch(`${FB_URL}/movimientos.json`, {method:'POST', body:JSON.stringify(m)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  MOVS.push(m);
+}
+
+function fechaLocal(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fechaHoraTxt(iso){
+  const d=new Date(iso); if(isNaN(d)) return '';
+  return fmtFecha(fechaLocal(d))+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+async function openReporte(seccion){
+  const hoy=new Date(), ini=new Date(); ini.setDate(ini.getDate()-30);
+  document.getElementById('rp-desde').value=fechaLocal(ini);
+  document.getElementById('rp-hasta').value=fechaLocal(hoy);
+  document.getElementById('rp-sec').value=seccion||'';
+  document.getElementById('rp-tipo').value='';
+  document.getElementById('rp-q').value='';
+  document.getElementById('rp-body').innerHTML='';
+  document.getElementById('rp-empty').style.display='none';
+  document.getElementById('rp-resumen').textContent='Cargando movimientos…';
+  document.getElementById('mo-rep').classList.add('open');
+  try{
+    const r=await fetch(`${FB_URL}/movimientos.json`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    MOVS=toArr(await r.json());
+  }catch(e){
+    document.getElementById('rp-resumen').textContent='No se pudo cargar el reporte: '+e.message;
+    return;
+  }
+  const usr=[...new Set(MOVS.map(m=>m.usuario).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  document.getElementById('rp-usr').innerHTML='<option value="">Todos los usuarios</option>'+
+    usr.map(n=>`<option>${esc(n)}</option>`).join('');
+  renderReporte();
+}
+
+function movsFiltrados(){
+  const desde=document.getElementById('rp-desde').value, hasta=document.getElementById('rp-hasta').value;
+  const sec=document.getElementById('rp-sec').value, tipo=document.getElementById('rp-tipo').value;
+  const usr=document.getElementById('rp-usr').value, q=normTxt(document.getElementById('rp-q').value.trim());
+  return MOVS.filter(m=>{
+    const f=fechaLocal(new Date(m.fecha));
+    if(desde && f<desde) return false;
+    if(hasta && f>hasta) return false;
+    if(sec && m.entidad!==sec) return false;
+    if(tipo && m.tipo!==tipo) return false;
+    if(usr && m.usuario!==usr) return false;
+    if(q && !normTxt([m.codigo,m.nombre,m.categoria,m.usuario,m.para,m.nota,m.registradoPor].join(' ')).includes(q)) return false;
+    return true;
+  }).sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
+}
+
+function renderReporte(){
+  const data=movsFiltrados();
+  const ins=data.filter(m=>m.tipo==='in'), outs=data.filter(m=>m.tipo==='out');
+  const suma=a=>a.reduce((t,m)=>t+(Number(m.cantidad)||0),0);
+  document.getElementById('rp-resumen').innerHTML=
+    `<strong>${data.length}</strong> movimientos · `+
+    `<span style="color:#1a7a45">${ins.length} entradas (${suma(ins)} unid.)</span> · `+
+    `<span style="color:#c0392b">${outs.length} salidas (${suma(outs)} unid.)</span>`;
+  document.getElementById('rp-empty').style.display=data.length?'none':'block';
+  document.getElementById('rp-body').innerHTML=data.map(m=>{
+    const esIn=m.tipo==='in';
+    return `<tr>
+    <td style="white-space:nowrap">${fechaHoraTxt(m.fecha)}</td>
+    <td><span class="badge" style="background:${esIn?'#e8f8f0;color:#1a7a45':'#fdedec;color:#921f1a'}">${esIn?'Entrada':'Salida'}</span></td>
+    <td>${SEC_NOMBRE[m.entidad]||''}</td>
+    <td><code style="font-size:12px">${esc(m.codigo)}</code></td>
+    <td><strong>${esc(m.nombre)}</strong></td>
+    <td style="white-space:nowrap"><strong style="color:${esIn?'#1a7a45':'#c0392b'}">${esIn?'+':'−'}${Number(m.cantidad)||0}</strong> ${esc(m.unit)}</td>
+    <td>${esc(m.usuario)}</td>
+    <td>${esc(m.para)}</td>
+    <td style="white-space:nowrap;color:#666">${m.stockAntes} → ${m.stockDespues}</td>
+    <td>${esc(m.nota)}</td>
+    <td style="color:#888">${esc(m.registradoPor)}</td>
+  </tr>`; }).join('');
+}
+
+function exportReporteCSV(){
+  const data=movsFiltrados();
+  if(!data.length){ alert('No hay movimientos para exportar con estos filtros.'); return; }
+  const hdr=['Fecha','Tipo','Sección','Código','Ítem','Categoría','Cantidad','Unidad','Usuario (retira/ingresa)','Para quién / Origen','Stock antes','Stock después','Observación','Registrado por'];
+  const rows=data.map(m=>[fechaHoraTxt(m.fecha), m.tipo==='in'?'Entrada':'Salida', SEC_NOMBRE[m.entidad]||'', m.codigo, m.nombre, m.categoria,
+    m.cantidad, m.unit, m.usuario, m.para, m.stockAntes, m.stockDespues, m.nota, m.registradoPor]
+    .map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\ufeff'+encodeURIComponent([hdr.join(','),...rows].join('\n'));
+  a.download='surframe-movimientos.csv';
+  a.click();
 }
 
 /* ═══ ETIQUETAS DE COLUMNA (vista de fichas en móvil) ═══
