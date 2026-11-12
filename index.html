@@ -82,6 +82,14 @@ tbody td{padding:10px 14px;vertical-align:middle}
 .badge-warn{background:#fef5e7;color:#9c6a10}
 .badge-danger{background:#fdedec;color:#921f1a}
 .tag-inox{background:#e8eaf6;color:#3949ab;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+/* Tornería: fila que encabeza cada grupo de códigos y despliega su lista */
+tr.tor-grupo{cursor:pointer;background:#f4f5f7;user-select:none;-webkit-tap-highlight-color:transparent}
+tr.tor-grupo:hover{background:#eceef1}
+tr.tor-grupo td{padding:10px 12px;font-size:14px}
+tr.tor-grupo .tg-flecha{display:inline-block;width:16px;color:#666;font-size:13px}
+tr.tor-grupo code{background:#111;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;margin-right:8px}
+tr.tor-grupo .tg-n{color:#777;font-size:12px;margin-left:10px}
+tr.tor-grupo .tg-alerta{background:#fdecea;color:#c0392b;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;margin-left:10px}
 .dimcell{font-family:monospace;font-size:12px;color:#555}
 
 /* ── ADMIN TABS ── */
@@ -419,6 +427,15 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
     transform:translateY(1px) rotate(-135deg)
   }
   .empty{background:#fff;border:1px solid #e4e4e4;border-radius:12px;padding:2.2rem 1rem}
+
+  /* Tornería: la fila de grupo es una ficha propia, sin etiqueta ni flecha de ficha */
+  .tbl-wrap tbody tr.tor-grupo{background:#f1f2f4;border-color:#dcdde0;padding:12px 14px}
+  .tbl-wrap tbody tr.tor-grupo:hover{background:#f1f2f4}
+  .tbl-wrap tbody tr.tor-grupo td{padding:0;margin:0;border:none;font-size:14px;text-align:left;justify-content:flex-start}
+  .tbl-wrap tbody tr.tor-grupo td::before,
+  .tbl-wrap table.plegable tbody tr.tor-grupo td:first-child::after{display:none;content:none}
+  .tbl-wrap tbody tr.tor-grupo td>.tdv{text-align:left;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+  .tbl-wrap tbody tr.tor-grupo td code{font-size:12px !important;color:#fff !important}
 
   /* Ventanas emergentes: hoja que sube desde abajo, más cómoda de alcanzar */
   .overlay{align-items:flex-end}
@@ -2472,13 +2489,25 @@ function renderTorTable(){
     const qy=Number(d.qty), mn=Number(d.min);
     const sm=!st||(st==='ok'&&qy>mn)||(st==='warn'&&qy>0&&qy<=mn)||(st==='danger'&&qy===0);
     return m&&cm&&sm;
-  }).sort((a,b)=>String(a.categoria).localeCompare(String(b.categoria))||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
+  }).sort((a,b)=>torPrefijo(a).localeCompare(torPrefijo(b))||String(a.codigo).localeCompare(String(b.codigo),'es',{numeric:true}));
   const tbody=document.getElementById('tor-tbl-body');
   const empty=document.getElementById('tor-tbl-empty');
   if(!f.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   const adm=esAdmin();
-  tbody.innerHTML=f.map(d=>`<tr>
+  /* Los ítems se agrupan por el prefijo del código (ACC, BRO, H-INT…). Cada grupo
+     es una fila que se toca para desplegar su lista. Al buscar o filtrar, los
+     grupos con resultados se muestran abiertos. */
+  const filtrando=!!(q||cat||st);
+  const grupos=new Map();
+  f.forEach(d=>{const p=torPrefijo(d); if(!grupos.has(p)) grupos.set(p,[]); grupos.get(p).push(d);});
+  tbody.innerHTML=[...grupos].map(([pre,items])=>{
+    const abierto=filtrando||torGruposAbiertos.has(pre);
+    const alerta=items.filter(x=>Number(x.qty)<=Number(x.min)).length;
+    const cab=`<tr class="tor-grupo${abierto?' tg-abierto':''}" data-g="${esc(pre)}" onclick="toggleTorGrupo(this.dataset.g)">
+      <td colspan="9"><span class="tg-flecha">${abierto?'▾':'▸'}</span><code>${esc(pre)}</code><strong>${esc(items[0].categoria||'Sin categoría')}</strong><span class="tg-n">${items.length} ${items.length===1?'ítem':'ítems'}</span>${alerta?`<span class="tg-alerta">${alerta} con stock bajo</span>`:''}</td>
+    </tr>`;
+    return cab+(abierto?items.map(d=>`<tr>
     <td><code style="font-size:12px;color:#666">${esc(d.codigo)}</code></td>
     <td><strong>${esc(d.nombre)}</strong>${d.modelo?`<br><small style="color:#aaa">${esc(d.modelo)}</small>`:''}</td>
     <td><span class="tag-inox">${esc(d.categoria)}</span></td>
@@ -2494,7 +2523,23 @@ function renderTorTable(){
       ${adm?`<button class="btn btn-outline btn-sm" style="margin-left:3px" onclick="openTorModal(${d.id})">✏</button>
       <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="deleteTorneria(${d.id})">✕</button>`:''}
     </td>
-  </tr>`).join('');
+  </tr>`).join(''):'');
+  }).join('');
+}
+
+/* Grupo de un ítem: el prefijo de su código, sin el número (ACC-012 → ACC) */
+function torPrefijo(d){
+  const c=String(d.codigo||'').trim().toUpperCase();
+  const m=c.match(/^(.*?)-?\d+$/);
+  return (m&&m[1])||c||'SIN CÓDIGO';
+}
+/* Grupos desplegados; se recuerda mientras la página está abierta */
+const torGruposAbiertos=new Set();
+function toggleTorGrupo(pre){
+  /* Con búsqueda o filtro activos los grupos ya están todos abiertos */
+  if(document.getElementById('tor-search').value||document.getElementById('tor-filter-cat').value||document.getElementById('tor-filter-stock').value) return;
+  if(torGruposAbiertos.has(pre)) torGruposAbiertos.delete(pre); else torGruposAbiertos.add(pre);
+  renderTorTable();
 }
 
 /* Prefijo del código según la categoría: BRO-001, H-INT-001, PLA-001… */
@@ -5534,7 +5579,7 @@ document.querySelectorAll('.tbl-wrap tbody').forEach(tb=>{
 document.addEventListener('click', e=>{
   if(!window.matchMedia('(max-width:760px)').matches) return;
   const tr=e.target.closest('.tbl-wrap table.plegable tbody tr');
-  if(!tr) return;
+  if(!tr || tr.classList.contains('tor-grupo')) return;
   if(e.target.closest('button,a,input,select,textarea,label')) return;
   const abiertas=fichasAbiertas(tr.closest('table'));
   const clave=claveFicha(tr);
