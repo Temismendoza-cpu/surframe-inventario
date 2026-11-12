@@ -1199,8 +1199,8 @@ a.eq-card:hover{border-color:#111;box-shadow:0 3px 12px rgba(0,0,0,.09);transfor
     </div>
     <p id="mv-preview" style="font-size:14px;color:#444;margin-top:12px;min-height:22px"></p>
     <div class="form-group" style="margin-top:6px">
-      <label id="mv-usr-lbl">Quién retira *</label>
-      <select id="mv-usr"></select>
+      <label id="mv-usr-lbl">Quién retira</label>
+      <input id="mv-usr" readonly tabindex="-1" style="background:#f4f4f4;color:#555;cursor:default">
     </div>
     <div class="form-group" style="margin-top:12px">
       <label id="mv-para-lbl">Para quién es *</label>
@@ -5303,12 +5303,12 @@ function openMov(entity,id,type){
   document.getElementById('mv-qty').value='';
   document.getElementById('mv-err').textContent='';
   document.getElementById('mv-preview').textContent='';
-  /* Quién retira / ingresa (por defecto quien tiene la sesión) y para quién es */
+  /* Quién retira / ingresa (fijo: quien tiene la sesión) y para quién es */
   const yo=(currentUser&&currentUser.name)||'';
   const nombres=[...new Set(getUsers().map(u=>u.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
   if(yo && !nombres.includes(yo)) nombres.unshift(yo);
-  document.getElementById('mv-usr').innerHTML=nombres.map(n=>`<option${n===yo?' selected':''}>${esc(n)}</option>`).join('');
-  document.getElementById('mv-usr-lbl').textContent = esIn?'Quién ingresa *':'Quién retira *';
+  document.getElementById('mv-usr').value=yo;   // fijo: siempre quien tiene la sesión abierta
+  document.getElementById('mv-usr-lbl').textContent = esIn?'Quién ingresa':'Quién retira';
   document.getElementById('mv-para-lbl').textContent = esIn?'Proveedor / origen':'Para quién es *';
   document.getElementById('mv-para').placeholder = esIn?'Opcional: proveedor, devolución…':'Persona, cliente o trabajo';
   document.getElementById('mv-para').value='';
@@ -5348,10 +5348,9 @@ async function confirmMov(){
   const nuevo = mov.type==='in' ? Number(d.qty)+n : Number(d.qty)-n;
   if(nuevo<0){ err.textContent='No puedes retirar más de lo que hay en stock.'; return; }
   if(mov.entity==='insumo' && !insumosReady){ err.textContent='Falta activar la hoja de Insumos en el backend.'; return; }
-  const usuario=document.getElementById('mv-usr').value.trim();
+  const usuario=(currentUser&&currentUser.name)||'';
   const para=document.getElementById('mv-para').value.trim();
   const nota=document.getElementById('mv-nota').value.trim();
-  if(!usuario){ err.textContent='Indica quién '+(mov.type==='in'?'ingresa':'retira')+'.'; return; }
   if(mov.type==='out' && !para){ err.textContent='Indica para quién es el retiro.'; return; }
 
   /* Actualización optimista: se ve el cambio al instante y se guarda en segundo plano */
