@@ -279,11 +279,15 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
           <div class="epp-ctx" id="epp-ctx">
             <h4><span id="epp-tit"></span><button class="btn btn-outline btn-sm" onclick="cerrarEpp()">✕</button></h4>
             <div id="epp-lista"></div>
-            <div style="font-size:12px;color:#888;margin-top:10px">¿No está el que necesitas? Agrégalo igual:</div>
-            <div class="libre">
-              <input id="lb-nom" placeholder="Descripción (ej: Guante nitrilo)">
-              <input id="lb-det" placeholder="Talla / detalle">
+            <div style="font-size:12px;color:#888;margin-top:10px" id="lb-txt">¿No está el que necesitas? Agrégalo igual:</div>
+            <div class="libre" id="lb-box">
+              <input id="lb-nom" placeholder="Descripción (ej: Guante nitrilo)" onkeydown="if(event.key==='Enter')addLibre()">
+              <input id="lb-det" placeholder="Talla / detalle" onkeydown="if(event.key==='Enter')addLibre()">
               <input id="lb-cant" type="number" min="1" placeholder="Cant." onkeydown="if(event.key==='Enter')addLibre()">
+              <select id="lb-unit" aria-label="Unidad" style="display:none">
+                <option>unidades</option><option>tiras</option><option>metros</option><option>planchas</option>
+                <option>kg</option><option>litros</option><option>cajas</option><option>rollos</option><option>pares</option>
+              </select>
               <button class="btn btn-in" onclick="addLibre()">＋</button>
             </div>
           </div>
@@ -408,7 +412,8 @@ const EPP = [
   {ico:'chaleco', nom:'Chaleco reflectante',  cats:['Chaleco']},
   {ico:'arnes', nom:'Arnés',                cats:['Arnés']},
   {ico:'discos', nom:'Discos y lijas',       cats:['Disco de corte','Disco flap','Disco de desbaste','Disco diamantado','Lija','Grata']},
-  {ico:'soldadura', nom:'Soldadura',            cats:['Electrodo','Alambre MIG','Gas / Tungsteno']}
+  {ico:'soldadura', nom:'Soldadura',            cats:['Electrodo','Alambre MIG','Gas / Tungsteno']},
+  {ico:'otros', nom:'Otros',                cats:[], libre:true}   // producto que no está en bodega ni en el sistema
 ];
 
 const ICONOS={
@@ -423,6 +428,7 @@ const ICONOS={
   chaleco:'<path d="M8 3l4 4 4-4 3 2v15h-5v-6h-4v6H5V5z"/><path d="M5 11h4.5"/><path d="M14.5 11H19"/><path d="M5 15h5"/><path d="M14 15h5"/>',
   arnes:'<path d="M8 3v6l4 3 4-3V3"/><circle cx="12" cy="13.5" r="1.5"/><path d="M12 15v1.5"/><path d="M6 21l6-4.5 6 4.5"/><path d="M8 9h8"/>',
   discos:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 5.5l-2 3"/><path d="M19 9.5l-3 1"/>',
+  otros:'<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M12 8v8"/><path d="M8 12h8"/>',
   soldadura:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.5 1 2.5 2 3 0-3 .5-5.5.5-8z"/>'
 };
 function icono(k,t){ return `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[k]}</svg>`; }
@@ -557,12 +563,22 @@ function abrirEpp(i){
   document.querySelectorAll('#epp button').forEach((b,j)=>b.classList.toggle('on',j===i));
   document.getElementById('epp-tit').innerHTML=icono(e.ico,18)+' '+esc(e.nom);
   const lista=INS.filter(x=>e.cats.includes(x.categoria)).sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
-  document.getElementById('epp-lista').innerHTML = lista.length
+  document.getElementById('epp-lista').innerHTML = e.libre
+    ? '<div style="font-size:13px;color:#888;padding:4px 0">Pide cualquier producto aunque no esté en bodega ni en el sistema (ej: perfil 40x40, pernos, pintura…).</div>'
+    : lista.length
     ? lista.map(filaCatalogo).join('')
     : `<div style="font-size:13px;color:#888;padding:4px 0">No hay ${esc(e.nom.toLowerCase())} registrados en bodega.</div>`;
-  document.getElementById('lb-nom').value = lista.length ? '' : e.nom;
+  // "Otros": sin texto de ayuda extra, con unidad elegible
+  document.getElementById('lb-txt').style.display = e.libre ? 'none' : '';
+  document.getElementById('lb-box').classList.toggle('con-unidad', !!e.libre);
+  document.getElementById('lb-unit').style.display = e.libre ? '' : 'none';
+  document.getElementById('lb-unit').selectedIndex = 0;
+  document.getElementById('lb-nom').placeholder = e.libre ? 'Descripción (ej: Perfil 40x40)' : 'Descripción (ej: Guante nitrilo)';
+  document.getElementById('lb-det').placeholder = e.libre ? 'Medida / detalle (ej: 2 mm, inox 304)' : 'Talla / detalle';
+  document.getElementById('lb-nom').value = (lista.length || e.libre) ? '' : e.nom;
   document.getElementById('lb-det').value=''; document.getElementById('lb-cant').value='';
   document.getElementById('epp-ctx').classList.add('open');
+  if(e.libre) document.getElementById('lb-nom').focus();
 }
 function cerrarEpp(){
   eppActual=null;
@@ -620,7 +636,7 @@ function addLibre(pre){
   const e=(pre==='lb' && eppActual!=null)?EPP[eppActual]:null;
   const u=$('unit');
   items.push({key:Date.now()+Math.random(), insId:null, libre:true, codigo:'', nombre:nom, modelo:'',
-              categoria:e?e.cats[0]:'', unit:u?u.value:'unidades', cantidad:cant, detalle:$('det').value.trim()});
+              categoria:(e&&e.cats[0])||'', unit:u?u.value:'unidades', cantidad:cant, detalle:$('det').value.trim()});
   $('nom').value=''; $('det').value=''; $('cant').value=''; if(u) u.selectedIndex=0;
   if(pre==='ot') $('nom').focus();
   renderItems();
