@@ -102,6 +102,7 @@ main{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
 .cat-row input{padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;width:100%;outline:none}
 .stk0{color:var(--danger)!important}
 .libre{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) 80px auto;gap:8px;margin-top:10px}
+.libre.con-unidad{grid-template-columns:minmax(0,2fr) minmax(0,1fr) 80px 120px auto}
 .libre input,.libre select{padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;width:100%;outline:none;font-family:inherit}
 
 .buscar{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:var(--r);font-size:14px;outline:none;margin-bottom:6px}
@@ -159,6 +160,8 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
   .form-grid{grid-template-columns:1fr}
   .libre{grid-template-columns:1fr 1fr}
   .libre input:first-child{grid-column:1/-1}
+  .libre.con-unidad{grid-template-columns:1fr 1fr}
+  .libre.con-unidad input:nth-child(2){grid-column:1/-1}
   .kv{grid-template-columns:110px 1fr}
   #sync{bottom:calc(16px + env(safe-area-inset-bottom))}
 }
@@ -293,6 +296,21 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
           <div class="res" id="s-res"></div>
         </div>
 
+        <!-- Producto fuera de catálogo -->
+        <div class="bloque">
+          <span class="sec-lbl">¿No está en insumos? Agrega otro producto</span>
+          <div class="libre con-unidad" style="margin-top:0">
+            <input id="ot-nom" placeholder="Descripción (ej: Perfil 40x40)" onkeydown="if(event.key==='Enter')addLibre('ot')">
+            <input id="ot-det" placeholder="Medida / detalle (ej: 2 mm, inox 304)" onkeydown="if(event.key==='Enter')addLibre('ot')">
+            <input id="ot-cant" type="number" min="1" placeholder="Cant." onkeydown="if(event.key==='Enter')addLibre('ot')">
+            <select id="ot-unit" aria-label="Unidad">
+              <option>unidades</option><option>tiras</option><option>metros</option><option>planchas</option>
+              <option>kg</option><option>litros</option><option>cajas</option><option>rollos</option><option>pares</option>
+            </select>
+            <button class="btn btn-in" onclick="addLibre('ot')">＋</button>
+          </div>
+        </div>
+
         <!-- Detalle -->
         <div class="bloque">
           <span class="sec-lbl">Detalle de lo solicitado</span>
@@ -301,7 +319,7 @@ td input{padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;
               <thead><tr><th>Cód.</th><th>Descripción</th><th>Talla / detalle</th><th style="text-align:center">Cant.</th><th></th></tr></thead>
               <tbody id="s-items"></tbody>
             </table>
-            <div class="empty" id="s-items-empty">Aún no agregas insumos. Usa el pedido rápido o el buscador.</div>
+            <div class="empty" id="s-items-empty">Aún no agregas insumos. Usa el pedido rápido, el buscador o agrega otro producto.</div>
           </div>
         </div>
 
@@ -516,7 +534,7 @@ function limpiarForm(){
   document.getElementById('s-solicitante').value=currentUser?currentUser.name:'';
   document.getElementById('s-fecha').value=hoy();
   document.getElementById('s-req').value='';
-  ['s-area','s-destino','s-obs','s-buscar'].forEach(id=>document.getElementById(id).value='');
+  ['s-area','s-destino','s-obs','s-buscar','ot-nom','ot-det','ot-cant'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('s-motivo').selectedIndex=0;
   setPrio(document.querySelector('#s-prio button[data-v="Normal"]'));
   document.getElementById('s-err').textContent='';
@@ -568,7 +586,15 @@ function buscarCat(){
   if(!q){ res.innerHTML=''; return; }
   const lista=INS.filter(x=>[x.codigo,x.nombre,x.modelo,x.categoria].join(' ').toLowerCase().includes(q)).slice(0,40);
   res.innerHTML = lista.length ? lista.map(filaCatalogo).join('')
-    : '<div class="empty" style="padding:1rem">Sin resultados. Usa “Pedido rápido” para agregarlo igual.</div>';
+    : `<div class="empty" style="padding:1rem">Sin resultados en el catálogo.
+        <div style="margin-top:8px"><button class="btn btn-in" onclick="buscadoComoLibre()">＋ Pedir “${esc(document.getElementById('s-buscar').value.trim())}” igual</button></div></div>`;
+}
+/* Lo que se buscó y no existe pasa al bloque de producto fuera de catálogo */
+function buscadoComoLibre(){
+  const b=document.getElementById('s-buscar');
+  document.getElementById('ot-nom').value=b.value.trim();
+  b.value=''; document.getElementById('s-res').innerHTML='';
+  document.getElementById('ot-cant').focus();
 }
 
 function addCat(id){
@@ -584,14 +610,19 @@ function addCat(id){
   renderItems();
   flash('Agregado: '+x.nombre);
 }
-function addLibre(){
-  const nom=document.getElementById('lb-nom').value.trim();
-  const cant=parseInt(document.getElementById('lb-cant').value)||1;
-  if(!nom){ document.getElementById('lb-nom').focus(); return; }
-  const e=eppActual!=null?EPP[eppActual]:null;
+/* pre='lb' → dentro de un pedido rápido · pre='ot' → producto cualquiera fuera de catálogo */
+function addLibre(pre){
+  pre=pre||'lb';
+  const $=s=>document.getElementById(pre+'-'+s);
+  const nom=$('nom').value.trim();
+  const cant=parseInt($('cant').value)||1;
+  if(!nom){ $('nom').focus(); return; }
+  const e=(pre==='lb' && eppActual!=null)?EPP[eppActual]:null;
+  const u=$('unit');
   items.push({key:Date.now()+Math.random(), insId:null, libre:true, codigo:'', nombre:nom, modelo:'',
-              categoria:e?e.cats[0]:'', unit:'unidades', cantidad:cant, detalle:document.getElementById('lb-det').value.trim()});
-  document.getElementById('lb-nom').value=''; document.getElementById('lb-det').value=''; document.getElementById('lb-cant').value='';
+              categoria:e?e.cats[0]:'', unit:u?u.value:'unidades', cantidad:cant, detalle:$('det').value.trim()});
+  $('nom').value=''; $('det').value=''; $('cant').value=''; if(u) u.selectedIndex=0;
+  if(pre==='ot') $('nom').focus();
   renderItems();
   flash('Agregado: '+nom);
 }
